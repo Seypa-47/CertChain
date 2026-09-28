@@ -58,8 +58,8 @@
 - [x] Implement the public verification DTO and API.
 - [x] Recompute local hash and compare database/on-chain proof.
 - [x] Implement dynamic `REVOKED > EXPIRED > VALID` status.
-- [ ] Build `/verify` and `/verify/[certificateId]` with accessible states.
-- [ ] Add authoritative explorer links and unavailable/mismatch handling.
+- [x] Build `/verify` and `/verify/[certificateId]` with accessible states.
+- [x] Add authoritative explorer links and unavailable/mismatch handling.
 
 ## Phase 8 - PDF and QR
 

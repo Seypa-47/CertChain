@@ -47,9 +47,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     ResponseEntity<ApiError> status(ResponseStatusException exception, HttpServletRequest request) {
         int status = exception.getStatusCode().value();
-        String code = status == 404 ? "CERTIFICATE_NOT_FOUND" : "REQUEST_ERROR";
+        String code = status == 404 ? "CERTIFICATE_NOT_FOUND"
+            : status == 429 ? "RATE_LIMITED" : "REQUEST_ERROR";
         return ResponseEntity.status(status).body(ApiError.of(status, code,
-            status == 404 ? "Certificate not found" : "Request failed", request.getRequestURI()));
+            status == 404 ? "Certificate not found"
+                : status == 429 ? "Too many verification requests" : "Request failed", request.getRequestURI()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

@@ -84,6 +84,9 @@ public class Web3jCertificateRegistryGateway implements CertificateRegistryGatew
     @Override
     public Optional<OnChainCertificate> findCertificate(String certificateKey) {
         try {
+            if (actualChainId() != identity.chainId()) {
+                throw new BlockchainUnavailableException("Blockchain chain changed");
+            }
             var record = contract.getCertificate(bytes32(certificateKey)).send();
             if (record.issuedAt.signum() == 0) return Optional.empty();
             return Optional.of(new OnChainCertificate(Numeric.toHexString(record.certificateHash),

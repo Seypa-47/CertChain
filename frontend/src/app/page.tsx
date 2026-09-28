@@ -13,9 +13,14 @@ export default function Home() {
               CertChain
             </span>
           </div>
-          <Link href="/login" className="rounded-full border border-teal-900/10 bg-white/80 px-4 py-2 text-sm font-medium text-teal-900 shadow-sm backdrop-blur hover:bg-teal-50">
-            Organization sign in
-          </Link>
+          <nav className="flex flex-wrap items-center gap-3" aria-label="Main navigation">
+            <Link href="/verify" className="rounded-full px-4 py-2 text-sm font-medium text-teal-900 underline hover:bg-teal-50">
+              Verify a certificate
+            </Link>
+            <Link href="/login" className="rounded-full border border-teal-900/10 bg-white/80 px-4 py-2 text-sm font-medium text-teal-900 shadow-sm backdrop-blur hover:bg-teal-50">
+              Organization sign in
+            </Link>
+          </nav>
         </header>
 
         <section className="grid items-end gap-12 lg:grid-cols-[1.2fr_0.8fr]">

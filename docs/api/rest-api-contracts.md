@@ -133,18 +133,23 @@ Response `200`:
   "issueDate": "2026-09-20",
   "expiryDate": "2029-09-20",
   "status": "VALID",
+  "proofResult": "VERIFIED",
   "blockchainVerified": true,
   "issuedAt": "2026-09-20T08:00:00Z",
   "revokedAt": null,
   "network": "sepolia",
   "chainId": 11155111,
-  "contractAddress": "0x..."
+  "contractAddress": "0x...",
+  "transactionHash": "0x...",
+  "blockNumber": 123,
+  "blockTimestamp": "2026-09-20T08:00:00Z",
+  "explorerUrl": "https://sepolia.etherscan.io/tx/0x..."
 }
 ```
 
 Unknown or malformed public certificate IDs return `404`. Public responses never include email, internal UUIDs, password-related data, failure internals, or private revocation notes.
 
-`GET /api/public/certificates/{certificateId}` currently returns an issued certificate only when its recomputed hash, on-chain hash, issuance time, expiry, and revocation flag agree. It includes public names, dates, derived `status`, `blockchainVerified`, and network identity. A mismatch returns `409 PROOF_MISMATCH`; unavailable RPC returns `503`. Status is computed on each request: `REVOKED` wins over `EXPIRED`, and expiry begins at 00:00 UTC on the day after `expiryDate`.
+The endpoint accepts only exact uppercase `CERT-YYYY-NNNNNN` IDs with nonzero sequence. Draft, unknown, and malformed IDs all return the same 404 response. For issued certificates it recomputes the canonical SHA-256, checks the stored hash and version, confirms journal chain/contract metadata, and compares the on-chain hash, issuer, issue time, expiry, and revocation state. A trusted result returns `proofResult: "VERIFIED"` with authoritative confirmed transaction metadata. A disagreement returns `PROOF_MISMATCH`; unavailable RPC returns `VERIFICATION_UNAVAILABLE`. Both have `blockchainVerified: false`, `status: null`, and no transaction metadata. Public names and dates may still be displayed with a clear failed-proof warning. No response claims `VALID` unless the proof passes. Revoked status takes priority over expired; expiry begins at 00:00 UTC on the day after `expiryDate`. Explorer links are built only for recognized network/chain combinations and validated transaction hashes. The public read endpoint limits each directly connected IP address to 120 requests per minute (single-instance in-memory limit; configure an edge limit for multi-instance deployments).
 
 ## Error envelope
 

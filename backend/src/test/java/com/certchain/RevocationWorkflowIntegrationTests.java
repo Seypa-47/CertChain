@@ -5,6 +5,7 @@ import com.certchain.certificate.*;
 import com.certchain.organization.Organization;
 import com.certchain.organization.OrganizationRepository;
 import com.certchain.transaction.BlockchainTransactionRepository;
+import com.certchain.transaction.BlockchainTransaction;
 import com.certchain.transaction.BlockchainTransactionStatus;
 import com.certchain.transaction.BlockchainTransactionType;
 import java.time.Instant;
@@ -26,6 +27,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -61,9 +63,13 @@ class RevocationWorkflowIntegrationTests {
         final Map<String, RevokeReceipt> receipts = new HashMap<>();
         final Map<String, String> byKey = new HashMap<>();
         Mode mode = Mode.SUCCESS;
-        void reset() { submissions.set(0); records.clear(); receipts.clear(); byKey.clear(); mode = Mode.SUCCESS; }
+        boolean unavailable;
+        void reset() { submissions.set(0); records.clear(); receipts.clear(); byKey.clear(); mode = Mode.SUCCESS; unavailable = false; }
         @Override public ChainIdentity identity() { return identity; }
-        @Override public Optional<OnChainCertificate> findCertificate(String key) { return Optional.ofNullable(records.get(key)); }
+        @Override public Optional<OnChainCertificate> findCertificate(String key) {
+            if (unavailable) throw new com.certchain.blockchain.BlockchainUnavailableException("RPC unavailable");
+            return Optional.ofNullable(records.get(key));
+        }
         @Override public String submitIssue(String key, String hash, long expiry) { throw new UnsupportedOperationException(); }
         @Override public Optional<IssueReceipt> findReceipt(String hash) { return Optional.empty(); }
         @Override public Optional<IssueReceipt> findIssueByKey(String key) { return Optional.empty(); }
@@ -103,6 +109,7 @@ class RevocationWorkflowIntegrationTests {
     @Autowired BlockchainTransactionRepository transactions;
     @Autowired PublicVerificationController publicVerification;
     @Autowired MockMvc mvc;
+    @Autowired JdbcTemplate jdbc;
 
     @BeforeEach void reset() { chain.reset(); }
 
@@ -114,6 +121,12 @@ class RevocationWorkflowIntegrationTests {
         certificate.beginIssuance(hashes.hash(certificate), CertificateHashService.VERSION);
         certificate.markIssued(Instant.parse("2026-01-01T12:00:00Z"));
         certificate = certificates.saveAndFlush(certificate);
+        BlockchainTransaction issue = new BlockchainTransaction(certificate, BlockchainTransactionType.ISSUE,
+            chain.identity.network(), chain.identity.chainId(), chain.identity.contractAddress());
+        issue.submitted("0x" + "%064x".formatted(FakeGateway.hashes.incrementAndGet()),
+            certificate.getIssuedAt());
+        issue.confirmed(1, certificate.getIssuedAt(), certificate.getIssuedAt());
+        transactions.saveAndFlush(issue);
         chain.records.put(hashes.contractKey(certificate.getCertificateId()),
             new CertificateRegistryGateway.OnChainCertificate("0x" + certificate.getCertificateHash(),
                 certificate.getIssuedAt().getEpochSecond(), expiry == null ? 0
@@ -137,9 +150,56 @@ class RevocationWorkflowIntegrationTests {
             .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("REVOKED"))
             .andExpect(jsonPath("$.revocationReason").doesNotExist())
             .andExpect(jsonPath("$.recipientEmail").doesNotExist());
+        mvc.perform(get("/api/public/certificates/{id}", certificate.getCertificateId()))
+            .andExpect(jsonPath("$.proofResult").value("VERIFIED"))
+            .andExpect(jsonPath("$.transactionHash").exists())
+            .andExpect(jsonPath("$.id").doesNotExist());
         assertEquals(1, chain.submissions.get());
         assertEquals("CERTIFICATE_ALREADY_REVOKED", assertThrows(CertificateConflictException.class,
             () -> service.revoke(certificate.getId(), certificate.getOrganization().getId(), "again")).code());
+    }
+
+    @Test void publicVerificationSeparatesMissingMismatchAndUnavailable() throws Exception {
+        Certificate issued = issued(null);
+        String id = issued.getCertificateId();
+        mvc.perform(get("/api/public/certificates/{id}", "bad-id"))
+            .andExpect(status().isNotFound());
+        mvc.perform(get("/api/public/certificates/{id}", "CERT-2099-999999"))
+            .andExpect(status().isNotFound());
+        Organization organization = issued.getOrganization();
+        Certificate draft = certificates.saveAndFlush(new Certificate(
+            "CERT-2099-%06d".formatted(FakeGateway.hashes.incrementAndGet()), organization,
+            "Private", "private@example.com", "Course", LocalDate.now()));
+        mvc.perform(get("/api/public/certificates/{id}", draft.getCertificateId()))
+            .andExpect(status().isNotFound());
+        mvc.perform(get("/api/public/certificates/{id}", id))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.proofResult").value("VERIFIED"))
+            .andExpect(jsonPath("$.status").value("VALID"));
+        chain.records.remove(hashes.contractKey(id));
+        mvc.perform(get("/api/public/certificates/{id}", id))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.proofResult").value("PROOF_MISMATCH"))
+            .andExpect(jsonPath("$.status").isEmpty())
+            .andExpect(jsonPath("$.blockchainVerified").value(false));
+        chain.unavailable = true;
+        mvc.perform(get("/api/public/certificates/{id}", id))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.proofResult").value("VERIFICATION_UNAVAILABLE"))
+            .andExpect(jsonPath("$.status").isEmpty());
+        chain.unavailable = false;
+        chain.records.put(hashes.contractKey(id), new CertificateRegistryGateway.OnChainCertificate(
+            "0x" + "f".repeat(64), issued.getIssuedAt().getEpochSecond(), 0, false,
+            chain.identity.issuerAddress()));
+        mvc.perform(get("/api/public/certificates/{id}", id))
+            .andExpect(jsonPath("$.proofResult").value("PROOF_MISMATCH"));
+        jdbc.update("update certificate set recipient_name = ? where id = ?", "Altered", issued.getId());
+        mvc.perform(get("/api/public/certificates/{id}", id))
+            .andExpect(jsonPath("$.proofResult").value("PROOF_MISMATCH"));
+    }
+
+    @Test void wrongJournalChainFailsProof() throws Exception {
+        Certificate certificate = issued(null);
+        jdbc.update("update blockchain_transaction set chain_id = ? where certificate_id = ?", 1L, certificate.getId());
+        mvc.perform(get("/api/public/certificates/{id}", certificate.getCertificateId()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.proofResult").value("PROOF_MISMATCH"));
     }
 
     @Test void rejectsDraftAndCrossTenantAndInvalidReason() {

@@ -4,7 +4,7 @@ CertChain is a blockchain-based digital certificate issuing and verification pla
 
 ## Current status
 
-The portal supports tenant-scoped draft creation, search, editing, and certificate details. Phase 9 adds confirmed, journaled certificate revocation, dynamic expiration, and a public proof page. A local Hardhat chain can exercise issuance and revocation. Sepolia deployment, PDF, and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+The portal supports tenant-scoped draft creation, search, editing, and certificate details. Public visitors can search certificate IDs at `/verify` and inspect confirmed blockchain proof without an account. Phase 9 adds confirmed, journaled certificate revocation and dynamic expiration. A local Hardhat chain can exercise issuance and revocation. Sepolia deployment, PDF, and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
 
 ## Architecture documentation
 

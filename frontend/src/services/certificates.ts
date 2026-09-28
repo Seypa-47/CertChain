@@ -182,13 +182,18 @@ export type PublicVerification = {
   organizationName: string;
   issueDate: string;
   expiryDate: string | null;
-  status: "VALID" | "EXPIRED" | "REVOKED";
+  status: "VALID" | "EXPIRED" | "REVOKED" | null;
+  proofResult: "VERIFIED" | "PROOF_MISMATCH" | "VERIFICATION_UNAVAILABLE";
   blockchainVerified: boolean;
   issuedAt: string;
   revokedAt: string | null;
-  network: string;
-  chainId: number;
-  contractAddress: string;
+  network: string | null;
+  chainId: number | null;
+  contractAddress: string | null;
+  transactionHash: string | null;
+  blockNumber: number | null;
+  blockTimestamp: string | null;
+  explorerUrl: string | null;
 };
 
 export async function verifyPublicCertificate(id: string): Promise<PublicVerification> {
