@@ -68,6 +68,30 @@ export type IssueProgress = {
 
 export type PdfArtifactView = { status: "PENDING" | "READY" | "FAILED"; error: string | null };
 
+export type EmailDeliveryView = {
+  enabled: boolean;
+  status: "PENDING" | "SENT" | "FAILED" | null;
+  attemptCount: number;
+  sentAt: string | null;
+  failureReason: string | null;
+  canResend: boolean;
+};
+
+export async function getEmailDeliveryStatus(id: string): Promise<EmailDeliveryView> {
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/email`, {
+    credentials: "include", cache: "no-store",
+  }));
+  return (await response.json()) as EmailDeliveryView;
+}
+
+export async function resendCertificateEmail(id: string): Promise<EmailDeliveryView> {
+  const csrf = await getCsrfToken();
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/email/resend`, {
+    method: "POST", credentials: "include", cache: "no-store", headers: { "X-XSRF-TOKEN": csrf },
+  }));
+  return (await response.json()) as EmailDeliveryView;
+}
+
 export async function getPdfArtifactStatus(id: string): Promise<PdfArtifactView> {
   const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/pdf/status`, {
     credentials: "include", cache: "no-store",

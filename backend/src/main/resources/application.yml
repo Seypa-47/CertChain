@@ -28,6 +28,9 @@ spring:
           auth: ${MAIL_AUTH:false}
           starttls:
             enable: ${MAIL_STARTTLS:false}
+          connectiontimeout: ${MAIL_TIMEOUT_MS:5000}
+          timeout: ${MAIL_TIMEOUT_MS:5000}
+          writetimeout: ${MAIL_TIMEOUT_MS:5000}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -66,7 +69,9 @@ app:
   storage:
     root: ${STORAGE_ROOT:./storage}
   mail:
+    enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:certificates@certchain.local}
+    retry-poll-ms: ${MAIL_RETRY_POLL_MS:60000}
   blockchain:
     enabled: ${BLOCKCHAIN_ENABLED:false}
     network: ${BLOCKCHAIN_NETWORK:sepolia}

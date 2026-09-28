@@ -2,6 +2,7 @@ package com.certchain.artifact;
 
 import com.certchain.auth.AuthenticatedPrincipal;
 import com.certchain.certificate.CertificateRepository;
+import com.certchain.email.CertificateEmailDeliveryService;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -19,11 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class CertificateArtifactController {
     private final CertificateArtifactService artifacts;
     private final CertificateRepository certificates;
+    private final CertificateEmailDeliveryService emails;
 
     public CertificateArtifactController(CertificateArtifactService artifacts,
-                                         CertificateRepository certificates) {
+                                         CertificateRepository certificates, CertificateEmailDeliveryService emails) {
         this.artifacts = artifacts;
         this.certificates = certificates;
+        this.emails = emails;
     }
 
     @GetMapping("/{id}/pdf")
@@ -47,6 +50,10 @@ public class CertificateArtifactController {
     @PostMapping("/{id}/pdf/retry")
     public CertificateArtifactService.ArtifactView retry(@PathVariable UUID id,
         @AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        return artifacts.ensure(id, principal.organizationId());
+        var result = artifacts.ensure(id, principal.organizationId());
+        if (result.status() == CertificateArtifactService.ArtifactState.READY) {
+            emails.deliverAfterArtifact(id, principal.organizationId());
+        }
+        return result;
     }
 }

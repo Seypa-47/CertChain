@@ -78,10 +78,10 @@
 
 ## Phase 10 - Email
 
-- [ ] Implement templated issuance email and PDF/download delivery choice.
-- [ ] Record delivery attempts without rolling back issuance.
-- [ ] Add retry and development SMTP configuration.
-- [ ] Test successful and failed delivery behavior.
+- [x] Implement templated issuance email with the generated PDF attachment.
+- [x] Record delivery attempts without rolling back issuance.
+- [x] Add bounded retry, authorized resend, and development SMTP configuration.
+- [ ] Complete successful and failed delivery testing against Mailpit and PostgreSQL. Unit tests pass; Docker Desktop is currently unavailable.
 
 ## Phase 11 - Dashboard and UI polish
 

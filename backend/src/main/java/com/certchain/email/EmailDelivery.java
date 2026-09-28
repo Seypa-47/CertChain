@@ -47,8 +47,19 @@ public class EmailDelivery extends AuditableEntity {
     public String getFailureReason() { return failureReason; }
     public Instant getSentAt() { return sentAt; }
     public UUID getId() { return id; }
-    public void setStatus(EmailDeliveryStatus value) { this.status = value; }
-    public void setAttemptCount(int value) { this.attemptCount = value; }
-    public void setFailureReason(String value) { this.failureReason = value; }
-    public void setSentAt(Instant value) { this.sentAt = value; }
+    public void beginAttempt(String currentRecipient) {
+        recipientEmail = java.util.Objects.requireNonNull(currentRecipient);
+        attemptCount++;
+        status = EmailDeliveryStatus.PENDING;
+        failureReason = null;
+    }
+    public void markSent(Instant when) {
+        status = EmailDeliveryStatus.SENT;
+        sentAt = java.util.Objects.requireNonNull(when);
+        failureReason = null;
+    }
+    public void markFailed(String safeReason) {
+        status = EmailDeliveryStatus.FAILED;
+        failureReason = java.util.Objects.requireNonNull(safeReason);
+    }
 }

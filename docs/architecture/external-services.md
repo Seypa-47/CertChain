@@ -44,9 +44,11 @@ No database, JWT, SMTP, RPC credential, or private key may use the `NEXT_PUBLIC_
 | `DEV_ADMIN_PASSWORD` | Yes | Development bootstrap password, required when enabled; never commit a real value. |
 | `STORAGE_ROOT` | No | Private local artifact directory. Store only generated keys in PostgreSQL; use a durable volume for deployment or replace the storage interface with object storage. |
 | `MAIL_HOST`, `MAIL_PORT` | No | SMTP connection. |
+| `MAIL_ENABLED` | No | Enables issuance email and its retry scheduler; defaults to false. |
 | `MAIL_USERNAME`, `MAIL_PASSWORD` | Yes | SMTP credentials when required. |
 | `MAIL_AUTH`, `MAIL_STARTTLS` | No | SMTP security settings. |
 | `MAIL_FROM` | No | Sender address. |
+| `MAIL_TIMEOUT_MS`, `MAIL_RETRY_POLL_MS` | No | Bounded SMTP wait and retry polling interval. |
 | `BLOCKCHAIN_ENABLED` | No | Safe feature switch; defaults to false. |
 | `BLOCKCHAIN_NETWORK`, `BLOCKCHAIN_CHAIN_ID` | No | Expected network identity. |
 | `BLOCKCHAIN_RPC_URL` | Yes | RPC endpoint, often containing a provider credential. |

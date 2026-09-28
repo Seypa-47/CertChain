@@ -8,6 +8,8 @@ import com.certchain.blockchain.InvalidBlockchainReceiptException;
 import com.certchain.blockchain.IssueReceiptValidator;
 import com.certchain.artifact.CertificateArtifactService;
 import com.certchain.artifact.CertificateArtifactService.ArtifactView;
+import com.certchain.artifact.CertificateArtifactService.ArtifactState;
+import com.certchain.email.CertificateEmailDeliveryService;
 import com.certchain.certificate.IssuancePersistence.Snapshot;
 import com.certchain.transaction.BlockchainTransactionStatus;
 import java.time.Duration;
@@ -24,18 +26,20 @@ public class IssuanceService {
     private final int confirmations;
     private final Duration receiptTimeout;
     private final CertificateArtifactService artifacts;
+    private final CertificateEmailDeliveryService emails;
 
     public IssuanceService(CertificateRegistryGateway gateway, IssuancePersistence journal,
                            IssueReceiptValidator validator,
                            @Value("${app.blockchain.confirmations}") int confirmations,
                            @Value("${app.blockchain.receipt-timeout}") Duration receiptTimeout,
-                           CertificateArtifactService artifacts) {
+                           CertificateArtifactService artifacts, CertificateEmailDeliveryService emails) {
         this.gateway = gateway;
         this.journal = journal;
         this.validator = validator;
         this.confirmations = confirmations;
         this.receiptTimeout = receiptTimeout;
         this.artifacts = artifacts;
+        this.emails = emails;
     }
 
     public IssueProgress issue(UUID certificateId, UUID organizationId) {
@@ -160,7 +164,9 @@ public class IssuanceService {
 
     private IssueProgress completedProgress(Snapshot snapshot, ChainIdentity chain) {
         if (snapshot.lifecycle() == CertificateLifecycle.ISSUED) {
-            artifacts.ensure(snapshot.certificateId(), snapshot.organizationId());
+            if (artifacts.ensure(snapshot.certificateId(), snapshot.organizationId()).status() == ArtifactState.READY) {
+                emails.deliverAfterArtifact(snapshot.certificateId(), snapshot.organizationId());
+            }
         }
         return progress(snapshot, chain);
     }

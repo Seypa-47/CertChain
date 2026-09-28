@@ -8,7 +8,8 @@ import {
   getRevokeProgress, revokeCertificate, reconcileRevocation,
   updateDraft,
   getPdfArtifactStatus, retryPdfArtifact, downloadPdfArtifact,
-  type CertificateDetails, type IssueProgress, type RevokeProgress, type PdfArtifactView,
+  getEmailDeliveryStatus, resendCertificateEmail,
+  type CertificateDetails, type IssueProgress, type RevokeProgress, type PdfArtifactView, type EmailDeliveryView,
 } from "@/services/certificates";
 import { CertificateForm } from "@/components/certificate-form";
 
@@ -18,6 +19,8 @@ export default function CertificateDetailsPage() {
   const [progress, setProgress] = useState<IssueProgress | null>(null);
   const [revocation, setRevocation] = useState<RevokeProgress | null>(null);
   const [artifact, setArtifact] = useState<PdfArtifactView | null>(null);
+  const [delivery, setDelivery] = useState<EmailDeliveryView | null>(null);
+  const [deliveryError, setDeliveryError] = useState("");
   const [artifactError, setArtifactError] = useState("");
   const [revokeConfirming, setRevokeConfirming] = useState(false);
   const [reason, setReason] = useState("");
@@ -42,6 +45,8 @@ export default function CertificateDetailsPage() {
       catch { setArtifact(null); }
       try { setRevocation(await getRevokeProgress(id)); }
       catch { setRevocation(null); }
+      try { setDelivery(await getEmailDeliveryStatus(id)); }
+      catch { setDelivery(null); }
     }
   }, [id]);
 
@@ -57,6 +62,8 @@ export default function CertificateDetailsPage() {
         catch { if (active) setArtifact(null); }
         try { const state = await getRevokeProgress(id); if (active) setRevocation(state); }
         catch { if (active) setRevocation(null); }
+        try { const state = await getEmailDeliveryStatus(id); if (active) setDelivery(state); }
+        catch { if (active) setDelivery(null); }
       }
     }).catch(() => { if (active) setError("Certificate details could not be loaded."); })
       .finally(() => { if (active) setLoading(false); });
@@ -74,6 +81,7 @@ export default function CertificateDetailsPage() {
         if (state.lifecycle !== "ISSUING") {
           void getCertificate(id).then(setCertificate);
           void getPdfArtifactStatus(id).then(setArtifact).catch(() => setArtifact(null));
+          void getEmailDeliveryStatus(id).then(setDelivery).catch(() => setDelivery(null));
         }
       }).catch(() => {});
     }, 5000);
@@ -141,6 +149,14 @@ export default function CertificateDetailsPage() {
       link.click(); link.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch { setArtifactError("Certificate PDF is unavailable. Retry generation if needed."); }
+    finally { setWorking(false); }
+  }
+
+  async function resendEmail() {
+    setWorking(true); setDeliveryError("");
+    try { setDelivery(await resendCertificateEmail(id)); }
+    catch { setDeliveryError("Email could not be sent. Check delivery status before trying again.");
+      try { setDelivery(await getEmailDeliveryStatus(id)); } catch { /* Keep the last known state. */ } }
     finally { setWorking(false); }
   }
 
@@ -227,6 +243,26 @@ export default function CertificateDetailsPage() {
             className="rounded-lg border border-teal-800 px-4 py-2 font-medium text-teal-900 disabled:opacity-50">
             {working ? "Working…" : "Retry PDF generation"}</button>}
         </div>
+      </section>}
+
+      {lifecycle === "ISSUED" && <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="email-heading">
+        <h2 id="email-heading" className="text-xl font-semibold text-slate-950">Recipient email</h2>
+        <p className="mt-2 text-sm text-slate-700" role="status" aria-live="polite">
+          {!delivery ? "Delivery status is unavailable."
+            : !delivery.enabled ? "Email delivery is disabled on this server."
+              : delivery.status === "SENT" ? `✓ Sent${delivery.sentAt ? ` at ${new Date(delivery.sentAt).toLocaleString()}` : ""}. The PDF was attached.`
+                : delivery.status === "PENDING" ? "◯ Delivery in progress."
+                  : delivery.status === "FAILED" ? "✕ Delivery failed. The certificate remains issued."
+                    : artifact?.status === "READY" ? "Delivery has not started." : "Delivery starts after the PDF is ready."}
+        </p>
+        {delivery && delivery.attemptCount > 0 && <p className="mt-2 text-sm text-slate-600">Attempts: {delivery.attemptCount}</p>}
+        {delivery?.failureReason && <p role="alert" className="mt-2 text-sm text-red-700">Email delivery failed. An authorized resend is available.</p>}
+        {deliveryError && <p role="alert" className="mt-2 text-sm text-red-700">{deliveryError}</p>}
+        {delivery?.canResend && artifact?.status === "READY" && <button type="button" disabled={working}
+          onClick={() => void resendEmail()}
+          className="mt-4 rounded-lg border border-teal-800 px-4 py-2 font-medium text-teal-900 disabled:opacity-50">
+          {working ? "Sending…" : delivery.status === "SENT" ? "Resend certificate email" : "Send certificate email"}
+        </button>}
       </section>}
 
       {lifecycle === "ISSUED" && <section className="rounded-2xl border border-red-200 bg-white p-6 shadow-sm" aria-labelledby="revocation-heading">

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getCertificate, issueCertificate, reconcileCertificate, revokeCertificate,
   reconcileRevocation, verifyPublicCertificate, createDraft, updateDraft, listCertificates } from "./certificates";
 import { getPdfArtifactStatus, retryPdfArtifact, downloadPdfArtifact } from "./certificates";
+import { getEmailDeliveryStatus, resendCertificateEmail } from "./certificates";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -52,6 +53,23 @@ describe("certificate PDF requests", () => {
       headers: { "X-XSRF-TOKEN": "csrf-pdf" } });
     expect(fetchMock.mock.calls[3][0]).toContain("/certificates/id-1/pdf");
     expect(fetchMock.mock.calls[3][1]).toMatchObject({ credentials: "include" });
+  });
+});
+
+describe("recipient email requests", () => {
+  it("reads status and resends without accepting a client recipient", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "FAILED", attemptCount: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "csrf-email" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "SENT", attemptCount: 2 }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await getEmailDeliveryStatus("id-1")).status).toBe("FAILED");
+    expect((await resendCertificateEmail("id-1")).status).toBe("SENT");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ credentials: "include" });
+    expect(fetchMock.mock.calls[2][0]).toContain("/certificates/id-1/email/resend");
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({ method: "POST", credentials: "include",
+      headers: { "X-XSRF-TOKEN": "csrf-email" } });
+    expect(fetchMock.mock.calls[2][1]).not.toHaveProperty("body");
   });
 });
 

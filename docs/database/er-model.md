@@ -99,7 +99,7 @@ erDiagram
 | `AppUser` | Authenticated organization administrator | Globally unique case-insensitive email, BCrypt password hash, role enum, organization required. |
 | `Certificate` | Operational certificate aggregate | UUID internal ID; unique immutable public ID; immutable proof fields after issuance begins; optimistic locking. |
 | `BlockchainTransaction` | Auditable transaction journal | One certificate can have issue/revoke attempts; transaction hash unique when present; status transitions are explicit. |
-| `EmailDelivery` | Retry/audit record for recipient notifications | Email failure is independent from issuance success. |
+| `EmailDelivery` | Current retry/audit journal for recipient notifications | One row per certificate and delivery type; `attempt_count` advances for each send. Email failure is independent from issuance success. |
 | `CertificateNumberSequence` | Concurrency-safe global yearly public ID allocation | `sequence_year` is the primary key. A single PostgreSQL upsert atomically allocates each number. |
 
 ## Enums and derived values
@@ -128,6 +128,7 @@ The database stores timestamps as UTC `timestamptz`. Issue and expiry are busine
 - index on `certificate(organization_id, lifecycle)`;
 - unique partial/index constraint for non-null transaction hashes;
 - index on `blockchain_transaction(certificate_id, transaction_type, created_at desc)`;
+- unique index on `email_delivery(certificate_id, delivery_type)` and due-retry index on `updated_at` for pending/failed rows (Flyway V4);
 - check constraint: `expiry_date is null or expiry_date >= issue_date`;
 - check constraints for 64-character lowercase hexadecimal hashes and Ethereum address/transaction lengths where practical;
 - foreign keys use restrictive deletion for certificates and transaction history. Issued records are never cascade-deleted.

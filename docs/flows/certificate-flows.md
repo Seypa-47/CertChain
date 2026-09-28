@@ -20,6 +20,10 @@ sequenceDiagram
     API->>DB: Mark transaction SUBMITTED
     Chain-->>API: confirmed receipt + CertificateIssued event
     API->>DB: Mark transaction CONFIRMED and certificate ISSUED
+    API->>Store: Generate or restore private PDF
+    API->>DB: Reserve email delivery attempt
+    API->>Mail: Send text/HTML with PDF attachment
+    API->>DB: Record SENT or FAILED
     API-->>UI: Issued certificate and blockchain metadata
 ```
 
@@ -29,7 +33,7 @@ Failure behavior:
 - A reverted or failed receipt sets the transaction to `FAILED` and certificate to `ISSUE_FAILED`; it is not public.
 - A timeout remains `SUBMITTED`/`ISSUING` until reconciliation determines the receipt outcome.
 - An RPC submission error with no returned hash remains `CREATED`/`ISSUING`: the transaction may have reached the chain. Reconciliation searches by deterministic key and event before any new submission is considered.
-- PDF and email delivery are later phases; their failures must never undo immutable issuance.
+- PDF or email failure never undoes immutable issuance. Failed email attempts are retried separately after a delay, and admins can resend to the stored recipient.
 
 ## Public verification
 

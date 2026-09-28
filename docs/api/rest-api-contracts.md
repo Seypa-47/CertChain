@@ -67,6 +67,8 @@ All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe 
 | `GET` | `/api/certificates/{id}/pdf` | Download the generated PDF after issuance. |
 | `GET` | `/api/certificates/{id}/pdf/status` | Read artifact state without triggering generation. |
 | `POST` | `/api/certificates/{id}/pdf/retry` | Regenerate a missing or failed artifact without resubmitting a chain transaction. |
+| `GET` | `/api/certificates/{id}/email` | Read issued-certificate delivery status and attempt count. |
+| `POST` | `/api/certificates/{id}/email/resend` | Send to the stored recipient only; requires CSRF and has a bounded attempt limit. |
 
 Create request:
 
@@ -110,7 +112,9 @@ Issue, reconciliation, and progress responses use the same shape. `POST /issue` 
 }
 ```
 
-`GET /api/certificates/{id}/issuance` is safe to poll. Proof-relevant fields cannot be changed after issuance starts. Once issuance is confirmed, PDF generation runs separately; a PDF failure leaves blockchain issuance intact and appears as `artifactStatus: "FAILED"`. `GET /pdf/status` returns `{ "status": "PENDING|READY|FAILED", "error": null|string }`. `POST /pdf/retry` needs CSRF and is idempotent when the file exists. `GET /pdf` returns an attachment only for the owning authenticated organization and an issued certificate with a ready artifact. Unknown and cross-tenant IDs return 404; drafts return `409 CERTIFICATE_NOT_ISSUED`; unavailable artifacts return `409 ARTIFACT_NOT_READY`. Recipient and public PDF download are intentionally unavailable until an explicit delivery/access policy is implemented. The public verification page remains available without a PDF.
+`GET /api/certificates/{id}/issuance` is safe to poll. Proof-relevant fields cannot be changed after issuance starts. Once issuance is confirmed, PDF generation runs separately; a PDF failure leaves blockchain issuance intact and appears as `artifactStatus: "FAILED"`. `GET /pdf/status` returns `{ "status": "PENDING|READY|FAILED", "error": null|string }`. `POST /pdf/retry` needs CSRF and is idempotent when the file exists. `GET /pdf` returns an attachment only for the owning authenticated organization and an issued certificate with a ready artifact. Unknown and cross-tenant IDs return 404; drafts return `409 CERTIFICATE_NOT_ISSUED`; unavailable artifacts return `409 ARTIFACT_NOT_READY`. Recipient and public PDF download endpoints remain unavailable; the recipient receives the PDF by email attachment after successful generation. The public verification page remains available without a PDF.
+
+`GET /email` returns `{ "enabled": true, "status": "PENDING|SENT|FAILED|null", "attemptCount": 1, "sentAt": null, "failureReason": null, "canResend": false }`. Failure reasons are generic codes, never raw SMTP responses. `POST /email/resend` accepts no body or recipient address and always uses the certificate's stored recipient. It returns the updated status. The endpoint rejects drafts with `CERTIFICATE_NOT_ISSUED`, missing PDFs with `ARTIFACT_NOT_READY`, a recent pending send with `EMAIL_IN_PROGRESS`, exhausted attempts with `EMAIL_RETRY_LIMIT`, and disabled delivery with `EMAIL_DISABLED`. Cross-tenant IDs return 404. SMTP failure records `FAILED` without changing issuance.
 
 Revoke request:
 

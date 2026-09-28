@@ -54,8 +54,9 @@ class PostgresDomainIntegrationTests {
 
     @Test
     void migrationAndEntityMappings() {
-        assertEquals(2, jdbc.queryForObject("select count(*) from flyway_schema_history where success = true", Integer.class));
+        assertEquals(4, jdbc.queryForObject("select count(*) from flyway_schema_history where success = true", Integer.class));
         assertEquals(1, jdbc.queryForObject("select count(*) from flyway_schema_history where version = '1' and success = true", Integer.class));
+        assertEquals(1, jdbc.queryForObject("select count(*) from flyway_schema_history where version = '4' and success = true", Integer.class));
         Organization org = organization();
         AppUser user = users.saveAndFlush(new AppUser(org, "Admin", UUID.randomUUID() + "@example.com", "hash", UserRole.ORG_ADMIN));
         Certificate cert = certificate(org, ids.nextId());
@@ -102,6 +103,15 @@ class PostgresDomainIntegrationTests {
             Pageable.unpaged()).getTotalElements());
         assertEquals(0, certificates.searchByOrganization(second.getId(), cert.getCertificateId(),
             Pageable.unpaged()).getTotalElements());
+    }
+
+    @Test
+    void emailDeliveryHasOneJournalPerCertificateAndType() {
+        Certificate cert = certificate(organization(), ids.nextId());
+        deliveries.saveAndFlush(new EmailDelivery(cert, EmailDeliveryType.CERTIFICATE_ISSUED,
+            "recipient@example.com"));
+        assertThrows(DataIntegrityViolationException.class, () -> deliveries.saveAndFlush(
+            new EmailDelivery(cert, EmailDeliveryType.CERTIFICATE_ISSUED, "recipient@example.com")));
     }
 
     @Test

@@ -4,7 +4,7 @@ CertChain is a blockchain-based digital certificate issuing and verification pla
 
 ## Current status
 
-The portal supports tenant-scoped draft creation, search, editing, certificate details, and PDF download after confirmed issuance. Public visitors can search certificate IDs at `/verify` and inspect confirmed blockchain proof without an account. Phase 9 adds confirmed, journaled certificate revocation and dynamic expiration. A local Hardhat chain can exercise issuance and revocation. Sepolia deployment and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+The portal supports tenant-scoped draft management, issuance, revocation, PDF download, and recipient email delivery. Public visitors can verify issued certificates at `/verify`. A local Hardhat chain can exercise issuance and revocation. Sepolia deployment remains future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
 
 ## Architecture documentation
 
@@ -21,7 +21,7 @@ The portal supports tenant-scoped draft creation, search, editing, certificate d
 - Java 21, Spring Boot, Spring Security, Spring Data JPA, Flyway, Maven
 - PostgreSQL
 - Solidity, Hardhat, OpenZeppelin, Ethereum Sepolia, web3j
-- PDFBox, ZXing, JavaMailSender (introduced in their implementation phases)
+- PDFBox, ZXing, JavaMailSender
 - Bundled Noto Sans fonts under the SIL Open Font License for certificate PDFs
 
 ## Prerequisites
@@ -82,6 +82,12 @@ Maven does not need to be installed globally; the repository includes the Maven 
 The frontend defaults to `http://localhost:3000`, the backend to `http://localhost:8080`, and the backend health endpoint to `http://localhost:8080/actuator/health`.
 
 Certificate PDFs use `STORAGE_ROOT` for private local storage and `FRONTEND_BASE_URL` to build the exact public verification URL inside the QR code. Set the latter to your HTTPS frontend origin in deployment. The local storage key stays in PostgreSQL; files are served only through the authenticated, tenant-scoped PDF endpoint. Recipient/public PDF downloads are disabled. The renderer accepts a small PNG/JPEG data URI as an optional organization logo; it does not fetch external logo URLs. The test fixture in [`docs/screenshots/sample-certificate.pdf`](docs/screenshots/sample-certificate.pdf) contains synthetic data only.
+
+Set `MAIL_ENABLED=true` in the backend process environment to enable recipient delivery. Local SMTP defaults to Mailpit at `localhost:1025`; inspect messages at `http://localhost:8025`. Production requires `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_AUTH`, `MAIL_STARTTLS`, and `MAIL_FROM` for the configured provider. Set `MAIL_TIMEOUT_MS` for bounded SMTP operations. A confirmed issuance with a ready PDF creates one delivery journal and sends a plain-text plus HTML email with the PDF attached. No public download URL is sent. SMTP failures leave the certificate issued; up to three automatic attempts occur with at least two minutes between them. An authenticated admin can resend, including an already sent message, up to five total attempts. A pending attempt is treated as in flight for two minutes, then eligible for recovery. SMTP delivery is at least once: a process crash after acceptance but before marking `SENT` can cause a duplicate; the journal prevents routine duplicate sends.
+
+Mailpit smoke test: start `docker compose up -d postgres mailpit`, run the backend with `MAIL_ENABLED=true` and local development bootstrap enabled, issue a certificate using a local chain, then inspect `http://localhost:8025` for one message addressed to the stored recipient. Confirm its plain-text and HTML parts, verification URL, and PDF attachment. `GET /api/certificates/{id}/email` should report `SENT` and `attemptCount: 1`. Resend through the admin details page to verify the manual action; never enter a recipient address in that action.
+
+For a transport-only smoke test with Mailpit listening on loopback ports 1025 and 8025, run `cd backend && MAILPIT_SMOKE=true ./mvnw -Dtest=MailpitSmokeIT test` (PowerShell: `$env:MAILPIT_SMOKE='true'; .\mvnw.cmd '-Dtest=MailpitSmokeIT' test`). This sends synthetic data and the checked-in sample PDF, then checks Mailpit's API for the recipient, public ID, and attachment. It does not exercise PostgreSQL journaling or an on-chain issuance. Mailpit can also run from its official Windows binary when Docker Desktop is unavailable.
 
 The login page is at `/login`. The backend sets a short-lived HttpOnly JWT cookie and never returns the token in JSON. The browser calls `GET /api/auth/csrf` before login, logout, and later unsafe writes, then sends the returned token as `X-XSRF-TOKEN` with credentials. The portal performs a server-side `/api/auth/me` check and a client recheck; backend authorization remains authoritative. Stateless logout clears the cookie. A copied token remains valid until its short expiry, so protect the signing key and use HTTPS. For separate frontend and API subdomains, configure the cookie domain and SameSite mode to match the deployment; `SameSite=None` requires Secure. Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin(s), never `*`.
 
