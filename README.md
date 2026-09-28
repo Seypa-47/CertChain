@@ -4,7 +4,7 @@ CertChain is a blockchain-based digital certificate issuing and verification pla
 
 ## Current status
 
-Phase 2 adds the PostgreSQL schema and backend domain foundation. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+Phase 3 adds organization administrator authentication, tenant-scoped reads, and a protected login/portal shell. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
 
 ## Architecture documentation
 
@@ -51,30 +51,36 @@ Maven does not need to be installed globally; the repository includes the Maven 
 
    Mailpit is available at `http://localhost:8025`.
 
-3. Run the backend:
+3. Generate a local JWT signing secret with at least 32 random bytes, for example `openssl rand -base64 32`, and set `JWT_SECRET_BASE64` in the backend process environment. To create a development organization and admin, also set `SPRING_PROFILES_ACTIVE=dev`, `DEV_BOOTSTRAP_ENABLED=true`, and all `DEV_ORGANIZATION_*` and `DEV_ADMIN_*` values from `backend/.env.example`. The admin password must have at least 12 characters. The bootstrap runs only with both the `dev` profile and explicit flag; it is idempotent. Never use it to configure a production account.
+
+   The example `.env` files are templates; Spring Boot does not automatically load `backend/.env`. Export the values in your shell or configure them in your run configuration. For local HTTP, use `AUTH_COOKIE_SECURE=false`; production requires HTTPS and `AUTH_COOKIE_SECURE=true`.
+
+4. Run the backend:
 
    ```bash
    cd backend
    ./mvnw spring-boot:run
    ```
 
-4. Run the frontend in another terminal:
+5. Run the frontend in another terminal:
 
    ```bash
    cd frontend
-   npm install
+   npm ci
    npm run dev
    ```
 
-5. Compile and test the smart contract workspace:
+6. Compile and test the smart contract workspace:
 
    ```bash
    cd blockchain
-   npm install
+   npm ci
    npm test
    ```
 
 The frontend defaults to `http://localhost:3000`, the backend to `http://localhost:8080`, and the backend health endpoint to `http://localhost:8080/actuator/health`.
+
+The login page is at `/login`. The backend sets a short-lived HttpOnly JWT cookie and never returns the token in JSON. The browser calls `GET /api/auth/csrf` before login, logout, and later unsafe writes, then sends the returned token as `X-XSRF-TOKEN` with credentials. The portal performs a server-side `/api/auth/me` check and a client recheck; backend authorization remains authoritative. Stateless logout clears the cookie. A copied token remains valid until its short expiry, so protect the signing key and use HTTPS. For separate frontend and API subdomains, configure the cookie domain and SameSite mode to match the deployment; `SameSite=None` requires Secure. Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin(s), never `*`.
 
 ## Environment and secret policy
 
@@ -84,7 +90,7 @@ Only `.env.example` templates are committed. Real database passwords, JWT keys, 
 
 ```bash
 # Frontend
-cd frontend && npm run lint && npm run build
+cd frontend && npm run lint && npm run build && npm test
 
 # Backend
 cd backend && ./mvnw test
@@ -93,7 +99,7 @@ cd backend && ./mvnw test
 cd blockchain && npm test
 ```
 
-Backend tests include a Docker-independent H2 context smoke test. PostgreSQL integration tests use Testcontainers to start a fresh PostgreSQL container, apply Flyway migrations, and run Hibernate schema validation before checking database constraints, tenant queries, and concurrent public ID allocation. Start Docker Desktop before running `cd backend && ./mvnw test` (on Windows, `cd backend; .\mvnw.cmd test`). The PostgreSQL tests skip when Docker is unavailable, so check the Surefire reports in `backend/target/surefire-reports/` and confirm `PostgresDomainIntegrationTests` reports zero skipped tests. The main application runs Flyway on startup against PostgreSQL. To apply migrations locally, start PostgreSQL with `docker compose up -d postgres`, then run `cd backend && ./mvnw spring-boot:run`.
+Backend tests include a Docker-independent H2 context smoke test. PostgreSQL integration tests use Testcontainers to start a fresh PostgreSQL container, apply Flyway migrations, and run Hibernate schema validation before checking database constraints, tenant queries, concurrent public ID allocation, and authentication/tenant security. Start Docker Desktop before running `cd backend && ./mvnw test` (on Windows, `cd backend; .\mvnw.cmd test`). Check the Surefire reports in `backend/target/surefire-reports/` and confirm `PostgresDomainIntegrationTests`, `AuthIntegrationTests`, and `DevBootstrapIntegrationTests` each report zero skipped tests. The main application runs Flyway on startup against PostgreSQL. To apply migrations locally, start PostgreSQL with `docker compose up -d postgres`, then run `cd backend && ./mvnw spring-boot:run`.
 
 ## Assignment deliverables
 

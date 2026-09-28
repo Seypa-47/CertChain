@@ -45,6 +45,21 @@ management:
       show-details: never
 
 app:
+  auth:
+    issuer: ${JWT_ISSUER:certchain}
+    secret-base64: ${JWT_SECRET_BASE64:}
+    access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT15M}
+    cookie-name: ${AUTH_COOKIE_NAME:CERTCHAIN_AUTH}
+    cookie-secure: ${AUTH_COOKIE_SECURE:true}
+    cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    cookie-domain: ${AUTH_COOKIE_DOMAIN:}
+  bootstrap:
+    enabled: ${DEV_BOOTSTRAP_ENABLED:false}
+    organization-name: ${DEV_ORGANIZATION_NAME:}
+    organization-email: ${DEV_ORGANIZATION_EMAIL:}
+    admin-name: ${DEV_ADMIN_NAME:}
+    admin-email: ${DEV_ADMIN_EMAIL:}
+    admin-password: ${DEV_ADMIN_PASSWORD:}
   frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="flex min-h-screen items-center bg-[radial-gradient(circle_at_top_left,_#dff5ee_0,_transparent_32rem)] px-6 py-16 sm:px-10">
@@ -11,9 +13,9 @@ export default function Home() {
               CertChain
             </span>
           </div>
-          <span className="rounded-full border border-teal-900/10 bg-white/80 px-3 py-1 text-xs font-medium text-teal-900 shadow-sm backdrop-blur">
-            Foundation in progress
-          </span>
+          <Link href="/login" className="rounded-full border border-teal-900/10 bg-white/80 px-4 py-2 text-sm font-medium text-teal-900 shadow-sm backdrop-blur hover:bg-teal-50">
+            Organization sign in
+          </Link>
         </header>
 
         <section className="grid items-end gap-12 lg:grid-cols-[1.2fr_0.8fr]">

@@ -29,7 +29,7 @@ CertChain/
 │   │   │   │   └── verify/
 │   │   │   │       ├── page.tsx
 │   │   │   │       └── [certificateId]/page.tsx
-│   │   │   ├── (auth)/login/page.tsx
+│   │   │   ├── login/page.tsx
 │   │   │   └── (portal)/
 │   │   │       ├── dashboard/page.tsx
 │   │   │       ├── certificates/
@@ -109,9 +109,9 @@ flowchart LR
 ## 4. Security boundaries
 
 - Public endpoints expose only fields required to verify a certificate. Recipient email, internal IDs, and revocation reason are excluded.
-- Organization endpoints require a valid access token and enforce organization ownership in the service/repository query, not only at the controller.
-- Passwords use BCrypt. JWT secrets, RPC URLs, SMTP credentials, database credentials, and wallet keys are environment variables.
-- CORS is an allowlist. Production uses HTTPS. Error responses do not expose stack traces.
+- Organization endpoints require a verified JWT in an HttpOnly cookie and enforce organization ownership in the repository query using the typed principal, not client-supplied identifiers. The current token includes issuer, subject/user ID, organization ID, role, issue time, and expiry; signature, algorithm, issuer, and expiry are validated. A disabled or changed user loses access.
+- Passwords use BCrypt. A development organization/admin bootstrap runs only with the `dev` profile and an explicit flag; credentials come from environment variables. JWT secrets, RPC URLs, SMTP credentials, database credentials, and wallet keys are environment variables.
+- Authentication cookies use configurable Secure, SameSite, and domain attributes. Stateless sessions retain CSRF protection for unsafe methods with a CSRF cookie and `X-XSRF-TOKEN` header. CORS accepts only configured origins with credentials. Production uses HTTPS. Error responses do not expose stack traces. The frontend guards portal routes for navigation; backend authorization is authoritative.
 - The signing wallet is server-side and receives only `ISSUER_ROLE`; the deployment/admin wallet should be separate in production.
 - Contract calls are idempotent by deterministic `certificateKey`; duplicate issuance reverts.
 

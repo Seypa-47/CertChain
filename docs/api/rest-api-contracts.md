@@ -4,7 +4,15 @@ Base path: `/api`. JSON uses camelCase. Dates use `YYYY-MM-DD`; timestamps use I
 
 ## Authentication
 
+Authentication uses a short-lived JWT in a `Secure`, `HttpOnly` cookie (`CERTCHAIN_AUTH` by default). Browser JavaScript cannot read the JWT. The cookie name, Secure flag, SameSite mode, and domain are configurable. All browser requests use `credentials: include`; unsafe requests send `X-XSRF-TOKEN` from the CSRF endpoint. Only configured origins may make credentialed cross-origin requests. No authentication route accepts an organization ID from the client.
+
+### `GET /api/auth/csrf`
+
+Public. Returns `200` with `{ "token": "..." }` and sets the CSRF cookie. Fetch this before login and before other unsafe requests. The CSRF token is separate from the JWT.
+
 ### `POST /api/auth/login`
+
+Public, but requires the CSRF header and cookie. Invalid email, password, unknown user, or disabled user produce the same `401 INVALID_CREDENTIALS` response.
 
 Request:
 
@@ -19,24 +27,27 @@ Response `200`:
 
 ```json
 {
-  "accessToken": "...",
-  "tokenType": "Bearer",
-  "expiresIn": 900,
-  "user": {
-    "id": "uuid",
-    "name": "Organization Admin",
-    "email": "admin@kit.edu.kh",
-    "role": "ORG_ADMIN",
-    "organization": { "id": "uuid", "name": "KIT Training Center" }
-  }
+  "id": "uuid",
+  "organizationId": "uuid",
+  "name": "Organization Admin",
+  "email": "admin@kit.edu.kh",
+  "role": "ORG_ADMIN"
 }
 ```
 
-The initial version uses a short-lived bearer access token. If refresh tokens are later added, they should use rotating, secure, HTTP-only cookies rather than browser storage.
+The response also sets the authentication cookie. It does not return an access token in JSON.
+
+### `GET /api/auth/me`
+
+Requires authentication. Returns the same current-user object as login. An absent, expired, tampered, or disabled-user token returns `401 UNAUTHORIZED`.
+
+### `POST /api/auth/logout`
+
+Requires authentication and CSRF. Returns `204` and expires the authentication cookie. Stateless tokens already copied elsewhere remain usable until expiry; the configured lifetime is at most one hour and defaults to 15 minutes.
 
 ## Organization portal
 
-All routes below require `Authorization: Bearer <token>` and organization ownership.
+All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe methods also require CSRF. The backend derives tenant identity from the verified token and applies it in repository queries. Requests cannot select a different organization.
 
 | Method | Route | Purpose |
 |---|---|---|
@@ -141,4 +152,6 @@ Unknown IDs return `404`; malformed IDs return `400`. Public responses never inc
 ```
 
 Expected stable error codes include `VALIDATION_ERROR`, `INVALID_CREDENTIALS`, `ACCESS_DENIED`, `CERTIFICATE_NOT_FOUND`, `CERTIFICATE_ALREADY_ISSUED`, `CERTIFICATE_ALREADY_REVOKED`, `BLOCKCHAIN_TRANSACTION_FAILED`, `BLOCKCHAIN_VERIFICATION_FAILED`, `PDF_GENERATION_FAILED`, and `INTERNAL_ERROR`.
+
+Phase 3 uses `UNAUTHORIZED` for missing/invalid authentication and `CSRF_INVALID` for missing/invalid CSRF. Error responses contain no stack traces or credentials. Routes listed for later phases remain contracts until implemented.
 

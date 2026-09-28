@@ -19,6 +19,7 @@
 |---|---|---|
 | `NEXT_PUBLIC_API_BASE_URL` | Public/browser | Backend API base URL ending in `/api`. |
 | `NEXT_PUBLIC_APP_URL` | Public/browser | Canonical frontend origin used for verification links. |
+| `API_INTERNAL_BASE_URL` | Server-only | API base URL for the Next.js portal guard. |
 
 No database, JWT, SMTP, RPC credential, or private key may use the `NEXT_PUBLIC_` prefix.
 
@@ -33,7 +34,14 @@ No database, JWT, SMTP, RPC credential, or private key may use the `NEXT_PUBLIC_
 | `FRONTEND_BASE_URL` | No | Canonical URL placed into QR and email links. |
 | `CORS_ALLOWED_ORIGINS` | No | Explicit comma-separated browser origin allowlist. |
 | `JWT_SECRET_BASE64` | Yes | High-entropy symmetric signing key for access tokens. |
+| `JWT_ISSUER` | No | Required JWT issuer claim and validation value. |
 | `JWT_ACCESS_TOKEN_TTL` | No | ISO-8601 duration, initially `PT15M`. |
+| `AUTH_COOKIE_NAME`, `AUTH_COOKIE_DOMAIN` | No | Authentication cookie name and optional shared domain. |
+| `AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAME_SITE` | No | Cookie transport and cross-site policy. Secure must be true in production; SameSite None requires Secure. |
+| `SPRING_PROFILES_ACTIVE` | No | Set to `dev` only for local bootstrap. |
+| `DEV_BOOTSTRAP_ENABLED` | No | Explicit flag for the development bootstrap; default false. |
+| `DEV_ORGANIZATION_NAME`, `DEV_ORGANIZATION_EMAIL`, `DEV_ADMIN_NAME`, `DEV_ADMIN_EMAIL` | No | Development bootstrap identities, required when enabled. |
+| `DEV_ADMIN_PASSWORD` | Yes | Development bootstrap password, required when enabled; never commit a real value. |
 | `STORAGE_ROOT` | No | Local artifact directory in development. |
 | `MAIL_HOST`, `MAIL_PORT` | No | SMTP connection. |
 | `MAIL_USERNAME`, `MAIL_PASSWORD` | Yes | SMTP credentials when required. |

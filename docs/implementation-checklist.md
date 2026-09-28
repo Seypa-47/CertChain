@@ -21,12 +21,12 @@
 
 ## Phase 3 - Authentication and tenancy
 
-- [ ] Add organization/user bootstrap flow for development.
-- [ ] Implement BCrypt authentication and short-lived JWT access tokens.
-- [ ] Configure stateless Spring Security and strict CORS.
-- [ ] Enforce organization ownership in all protected operations.
-- [ ] Build login and protected portal layout.
-- [ ] Test invalid credentials, disabled users, token validation, and cross-tenant denial.
+- [x] Add organization/user bootstrap flow for development.
+- [x] Implement BCrypt authentication and short-lived JWT access tokens.
+- [x] Configure stateless Spring Security and strict CORS.
+- [x] Enforce organization ownership in implemented protected operations.
+- [x] Build login and protected portal layout.
+- [x] Test invalid credentials, disabled users, token validation, and cross-tenant denial.
 
 ## Phase 4 - Draft certificate management
 
