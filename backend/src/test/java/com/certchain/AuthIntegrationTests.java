@@ -201,4 +201,31 @@ class AuthIntegrationTests {
             .cookie(authCookie(admin), token.cookie()).header("X-XSRF-TOKEN", token.token()))
             .andExpect(status().isServiceUnavailable());
     }
+
+    @Test void revokeEndpointRequiresAuthenticationCsrfAndTenantOwnership() throws Exception {
+        Certificate certificate = certificates.saveAndFlush(new Certificate(ids.nextId(), admin.getOrganization(),
+            "Recipient", "recipient@example.com", "Course", LocalDate.now()));
+        Csrf token = csrf();
+        String body = "{\"reason\":\"Private correction\"}";
+        mvc.perform(post("/api/certificates/{id}/revoke", certificate.getId())
+            .cookie(token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/certificates/{id}/revoke", certificate.getId())
+            .cookie(authCookie(admin)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/certificates/{id}/revoke", certificate.getId())
+            .with(user("viewer").authorities(() -> "VIEWER"))
+            .cookie(token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/certificates/{id}/revoke", certificate.getId())
+            .cookie(authCookie(other), token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isNotFound());
+        mvc.perform(post("/api/certificates/{id}/revoke", certificate.getId())
+            .cookie(authCookie(admin), token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CERTIFICATE_NOT_ISSUED"));
+    }
 }

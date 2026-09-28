@@ -98,6 +98,9 @@ class IssuanceWorkflowIntegrationTests {
         @Override public Optional<IssueReceipt> findIssueByKey(String key) {
             return Optional.ofNullable(byKey.get(key)).flatMap(this::findReceipt);
         }
+        @Override public String submitRevoke(String key) { throw new UnsupportedOperationException(); }
+        @Override public Optional<RevokeReceipt> findRevokeReceipt(String hash) { return Optional.empty(); }
+        @Override public Optional<RevokeReceipt> findRevokeByKey(String key) { return Optional.empty(); }
     }
 
     @Autowired FakeGateway chain;

@@ -1,6 +1,7 @@
 package com.certchain.common.exception;
 
 import com.certchain.blockchain.BlockchainUnavailableException;
+import com.certchain.certificate.CertificateConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +18,12 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(CertificateConflictException.class)
+    ResponseEntity<ApiError> certificateConflict(CertificateConflictException exception,
+                                                   HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(409,
+            exception.code(), exception.getMessage(), request.getRequestURI()));
+    }
     @ExceptionHandler(BlockchainUnavailableException.class)
     ResponseEntity<ApiError> blockchain(HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiError.of(503,

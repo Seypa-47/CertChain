@@ -10,6 +10,9 @@ public interface CertificateRegistryGateway {
     String submitIssue(String certificateKey, String certificateHash, long expiresAt);
     Optional<IssueReceipt> findReceipt(String transactionHash);
     Optional<IssueReceipt> findIssueByKey(String certificateKey);
+    String submitRevoke(String certificateKey);
+    Optional<RevokeReceipt> findRevokeReceipt(String transactionHash);
+    Optional<RevokeReceipt> findRevokeByKey(String certificateKey);
 
     record ChainIdentity(String network, long chainId, String contractAddress, String issuerAddress) {}
     record OnChainCertificate(String certificateHash, long issuedAt, long expiresAt,
@@ -19,4 +22,9 @@ public interface CertificateRegistryGateway {
     record IssueReceipt(String transactionHash, boolean success, long chainId,
                         String to, long blockNumber, Instant blockTimestamp,
                         long confirmations, List<IssueEvent> events) {}
+    record RevokeEvent(String name, String certificateKey, String revokedBy,
+                       long revokedAt, String address) {}
+    record RevokeReceipt(String transactionHash, boolean success, long chainId,
+                         String to, long blockNumber, Instant blockTimestamp,
+                         long confirmations, List<RevokeEvent> events) {}
 }

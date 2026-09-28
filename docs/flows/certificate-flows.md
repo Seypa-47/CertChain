@@ -68,8 +68,12 @@ sequenceDiagram
     UI->>API: POST /certificates/{id}/revoke
     API->>DB: Authorize owner, lock issued certificate, create REVOKE journal
     API->>Chain: revokeCertificate(key)
+    Chain-->>API: transaction hash
+    API->>DB: Mark transaction SUBMITTED
     Chain-->>API: confirmed receipt + CertificateRevoked event
-    API->>DB: Store revocation transaction, time, and private reason
+    API->>DB: Mark CONFIRMED and set revokedAt
     API-->>UI: Status REVOKED
 ```
+
+The reason is private and persisted before submission. The on-chain call carries only the certificate key. A missing receipt leaves the journal pending; a validated revert records failure without `revokedAt`. After a crash, reconciliation searches the known hash or indexed revocation event. Public verification derives `REVOKED > EXPIRED > VALID` on each read and never exposes the reason.
 

@@ -14,10 +14,15 @@ public class IssuanceReconciler {
     private static final Logger log = LoggerFactory.getLogger(IssuanceReconciler.class);
     private final IssuanceService service;
     private final IssuancePersistence journal;
+    private final RevocationService revocations;
+    private final RevocationPersistence revocationJournal;
 
-    public IssuanceReconciler(IssuanceService service, IssuancePersistence journal) {
+    public IssuanceReconciler(IssuanceService service, IssuancePersistence journal,
+                              RevocationService revocations, RevocationPersistence revocationJournal) {
         this.service = service;
         this.journal = journal;
+        this.revocations = revocations;
+        this.revocationJournal = revocationJournal;
     }
 
     @Scheduled(fixedDelayString = "${app.blockchain.reconcile-interval:PT1M}")
@@ -26,6 +31,12 @@ public class IssuanceReconciler {
             try { service.reconcileBackground(certificateId); }
             catch (RuntimeException unavailable) {
                 log.warn("Reconciliation deferred for certificate {}", certificateId);
+            }
+        }
+        for (var certificateId : revocationJournal.unresolvedIds()) {
+            try { revocations.reconcileBackground(certificateId); }
+            catch (RuntimeException unavailable) {
+                log.warn("Revocation reconciliation deferred for certificate {}", certificateId);
             }
         }
     }

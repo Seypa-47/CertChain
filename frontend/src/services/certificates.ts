@@ -15,6 +15,7 @@ export type CertificateDetails = {
   lifecycle: CertificateLifecycle;
   certificateHash: string | null;
   issuedAt: string | null;
+  revokedAt: string | null;
   organization: { id: string; name: string; logoUrl: string | null };
   transactions: Array<{
     transactionHash: string | null;
@@ -79,4 +80,68 @@ export function issueCertificate(id: string): Promise<IssueProgress> {
 
 export function reconcileCertificate(id: string): Promise<IssueProgress> {
   return postIssueAction(id, "reconcile");
+}
+
+export type RevokeProgress = {
+  id: string;
+  certificateId: string;
+  revokedAt: string | null;
+  transactionStatus: TransactionStatus | null;
+  transactionHash: string | null;
+  network: string;
+  chainId: number;
+  contractAddress: string;
+  blockNumber: number | null;
+  blockTimestamp: string | null;
+  explorerUrl: string | null;
+  failureReason: string | null;
+  guidance: string;
+};
+
+export async function getRevokeProgress(id: string): Promise<RevokeProgress> {
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/revocation`, {
+    credentials: "include", cache: "no-store",
+  }));
+  return (await response.json()) as RevokeProgress;
+}
+
+export async function revokeCertificate(id: string, reason: string): Promise<RevokeProgress> {
+  const csrf = await getCsrfToken();
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/revoke`, {
+    method: "POST", credentials: "include", cache: "no-store",
+    headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": csrf },
+    body: JSON.stringify({ reason }),
+  }));
+  return (await response.json()) as RevokeProgress;
+}
+
+export async function reconcileRevocation(id: string): Promise<RevokeProgress> {
+  const csrf = await getCsrfToken();
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/revocation/reconcile`, {
+    method: "POST", credentials: "include", cache: "no-store", headers: { "X-XSRF-TOKEN": csrf },
+  }));
+  return (await response.json()) as RevokeProgress;
+}
+
+export type PublicVerification = {
+  certificateId: string;
+  recipientName: string;
+  programName: string;
+  organizationName: string;
+  issueDate: string;
+  expiryDate: string | null;
+  status: "VALID" | "EXPIRED" | "REVOKED";
+  blockchainVerified: boolean;
+  issuedAt: string;
+  revokedAt: string | null;
+  network: string;
+  chainId: number;
+  contractAddress: string;
+};
+
+export async function verifyPublicCertificate(id: string): Promise<PublicVerification> {
+  const response = await checked(await fetch(`${apiBase}/public/certificates/${encodeURIComponent(id)}`, {
+    cache: "no-store",
+  }));
+  return (await response.json()) as PublicVerification;
 }

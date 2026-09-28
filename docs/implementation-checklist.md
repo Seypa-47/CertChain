@@ -55,9 +55,9 @@
 
 ## Phase 7 - Public verification
 
-- [ ] Implement the public verification DTO and API.
-- [ ] Recompute local hash and compare database/on-chain proof.
-- [ ] Implement dynamic `REVOKED > EXPIRED > VALID` status.
+- [x] Implement the public verification DTO and API.
+- [x] Recompute local hash and compare database/on-chain proof.
+- [x] Implement dynamic `REVOKED > EXPIRED > VALID` status.
 - [ ] Build `/verify` and `/verify/[certificateId]` with accessible states.
 - [ ] Add authoritative explorer links and unavailable/mismatch handling.
 
@@ -71,10 +71,10 @@
 
 ## Phase 9 - Revocation and expiration
 
-- [ ] Implement confirmed on-chain revocation workflow and journal.
-- [ ] Persist private reason, confirmed time, and transaction metadata.
-- [ ] Add admin confirmation UI and public revoked state.
-- [ ] Test expired, revoked-and-expired, unauthorized, duplicate, and failed revocations.
+- [x] Implement confirmed on-chain revocation workflow and journal.
+- [x] Persist private reason, confirmed time, and transaction metadata.
+- [x] Add admin confirmation UI and public revoked state.
+- [x] Test expired, revoked-and-expired, unauthorized, duplicate, and failed revocations.
 
 ## Phase 10 - Email
 

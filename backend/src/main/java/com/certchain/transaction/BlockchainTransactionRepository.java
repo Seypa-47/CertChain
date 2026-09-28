@@ -21,6 +21,10 @@ public interface BlockchainTransactionRepository extends JpaRepository<Blockchai
         @Param("type") BlockchainTransactionType type,
         @Param("issued") CertificateLifecycle issued,
         @Param("statuses") Set<BlockchainTransactionStatus> statuses, Pageable pageable);
+    @Query("select t from BlockchainTransaction t where t.transactionType = :type "
+        + "and t.certificate.revokedAt is null and t.status in :statuses order by t.createdAt asc")
+    List<BlockchainTransaction> findUnresolvedRevocations(@Param("type") BlockchainTransactionType type,
+        @Param("statuses") Set<BlockchainTransactionStatus> statuses, Pageable pageable);
     List<BlockchainTransaction> findByCertificateAndTransactionTypeOrderByCreatedAtDesc(
         Certificate certificate, BlockchainTransactionType transactionType);
     List<BlockchainTransaction> findByCertificateIdAndTransactionTypeOrderByCreatedAtDesc(

@@ -4,7 +4,7 @@ CertChain is a blockchain-based digital certificate issuing and verification pla
 
 ## Current status
 
-Phase 6 adds deterministic v1 certificate hashing, the typed web3j registry gateway, a durable issuance journal with receipt reconciliation, and an admin certificate details page. A local Hardhat chain can exercise the complete issuance path. Sepolia deployment, public verification, PDF, and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+Phase 9 adds confirmed, journaled certificate revocation, dynamic expiration, and a public proof page. A local Hardhat chain can exercise issuance and revocation. Sepolia deployment, PDF, and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
 
 ## Architecture documentation
 
@@ -104,6 +104,8 @@ Backend tests include a Docker-independent H2 context smoke test. PostgreSQL int
 The issuance tests use a fake gateway for failures, concurrency, and recovery. `LocalChainIntegrationIT` is an opt-in end-to-end test using a local Hardhat JSON-RPC node and a fresh PostgreSQL Testcontainer; no Sepolia funds are needed. Follow the local node and Ignition deployment instructions in [`blockchain/README.md`](blockchain/README.md), then set `CERTCHAIN_LOCAL_RPC`, `CERTCHAIN_LOCAL_CONTRACT`, and `CERTCHAIN_LOCAL_ISSUER_KEY` in the test process environment. The issuer key must match the local signer configured in Ignition. Run `cd backend && ./mvnw -Dtest=LocalChainIntegrationIT test` (Windows: `.\mvnw.cmd '-Dtest=LocalChainIntegrationIT' test`). Use `BLOCKCHAIN_ENABLED=true`, the node RPC URL, deployed address, local chain ID `31337`, and issuer key only in a local backend process when testing the UI. Set `BLOCKCHAIN_DEPLOYMENT_BLOCK` to the deployment block and use a low confirmation threshold for a local node. Never commit the key or a local deployment address.
 
 The checked-in `CertificateRegistry` Java wrapper was generated from the compiled `blockchain/artifacts/contracts/CertificateRegistry.sol/CertificateRegistry.json` ABI and bytecode using the pinned web3j 5.0.3 code generator. If the contract ABI changes, recompile the contract, export its `abi` and `bytecode` fields to `backend/target/codegen/CertificateRegistry.abi` and `.bin`, regenerate with `cd backend && ./mvnw org.codehaus.mojo:exec-maven-plugin:3.6.3:java -Dexec.mainClass=org.web3j.codegen.SolidityFunctionWrapperGenerator -Dexec.classpathScope=test -Dexec.args="-b target/codegen/CertificateRegistry.bin -a target/codegen/CertificateRegistry.abi -o target/codegen/generated -p com.certchain.blockchain.generated"`, then replace the checked-in wrapper and rerun backend/local-chain tests.
+
+Revocation tests also cover an issued certificate on the local chain. Admins confirm a private reason on the certificate details page; the backend records a `REVOKE` transaction and updates `revokedAt` only after validating its receipt and event. Public `/verify/{certificateId}` reads the current proof and computes `REVOKED`, `EXPIRED`, or `VALID` on demand. An uncertain transaction stays pending for reconciliation.
 
 ## Assignment deliverables
 

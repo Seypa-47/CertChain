@@ -10,6 +10,7 @@ import com.certchain.certificate.CertificateLifecycle;
 import com.certchain.certificate.CertificateRepository;
 import com.certchain.certificate.IssuancePersistence;
 import com.certchain.certificate.IssuanceService;
+import com.certchain.certificate.RevocationService;
 import com.certchain.organization.Organization;
 import com.certchain.organization.OrganizationRepository;
 import java.net.URI;
@@ -62,6 +63,7 @@ class LocalChainIntegrationIT {
     @Autowired CertificateRegistryGateway gateway;
     @Autowired IssueReceiptValidator validator;
     @Autowired IssuanceService issuance;
+    @Autowired RevocationService revocations;
     @Autowired IssuancePersistence journal;
     @Autowired CertificateHashService hashes;
     @Autowired CertificateRepository certificates;
@@ -134,6 +136,18 @@ class LocalChainIntegrationIT {
             required("CERTCHAIN_LOCAL_CONTRACT"), required("CERTCHAIN_LOCAL_ISSUER_KEY"), 1, 0,
             Duration.ofSeconds(1));
         assertThrows(IllegalStateException.class, () -> new Web3jCertificateRegistryGateway(wrong));
+    }
+
+    @Test void realGatewayRevokesConfirmedProofAndRejectsDuplicate() {
+        Certificate certificate = draft();
+        issuance.issue(certificate.getId(), certificate.getOrganization().getId());
+        var revoked = revocations.revoke(certificate.getId(), certificate.getOrganization().getId(),
+            "Private correction");
+        assertNotNull(revoked.revokedAt());
+        assertTrue(gateway.findCertificate(hashes.contractKey(certificate.getCertificateId()))
+            .orElseThrow().revoked());
+        assertThrows(com.certchain.certificate.CertificateConflictException.class,
+            () -> revocations.revoke(certificate.getId(), certificate.getOrganization().getId(), "again"));
     }
 
     private static void rpc(String method, String params) throws Exception {

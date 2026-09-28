@@ -62,6 +62,8 @@ All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe 
 | `POST` | `/api/certificates/{id}/issue` | Start or resume issuance; an unknown receipt returns pending state without another submission. |
 | `POST` | `/api/certificates/{id}/reconcile` | Check the receipt or on-chain event for a pending or failed attempt. |
 | `POST` | `/api/certificates/{id}/revoke` | Revoke an issued certificate with confirmation. |
+| `GET` | `/api/certificates/{id}/revocation` | Read the private revocation journal state. |
+| `POST` | `/api/certificates/{id}/revocation/reconcile` | Recheck a pending or failed revocation without resubmitting. |
 | `GET` | `/api/certificates/{id}/pdf` | Download the generated PDF after issuance. |
 
 Create request:
@@ -106,6 +108,8 @@ Revoke request:
 { "reason": "Issued to the wrong recipient" }
 ```
 
+The private `reason` is required, nonblank after trimming, and at most 1000 characters. It is stored in PostgreSQL and never sent to the contract or public API. A successful `POST /revoke` returns confirmed transaction metadata and `revokedAt`; a pending transaction returns `202` with `revokedAt: null`; a validated revert returns `200` with `transactionStatus: "FAILED"`. The response shape matches the issuance progress fields, with `revokedAt` and revocation guidance. Draft or failed issuance returns `409 CERTIFICATE_NOT_ISSUED`; already revoked returns `409 CERTIFICATE_ALREADY_REVOKED`; a chain proof mismatch returns `409 CHAIN_PROOF_MISMATCH`. Unknown and cross-tenant IDs both return `404 CERTIFICATE_NOT_FOUND`.
+
 ## Public verification
 
 | Method | Route | Purpose |
@@ -119,24 +123,22 @@ Response `200`:
   "certificateId": "CERT-2026-000001",
   "recipientName": "Hong Thanbrathna",
   "programName": "Blockchain Fundamentals",
-  "organization": { "name": "KIT Training Center", "logoUrl": null },
+  "organizationName": "KIT Training Center",
   "issueDate": "2026-09-20",
   "expiryDate": "2029-09-20",
   "status": "VALID",
   "blockchainVerified": true,
-  "blockchain": {
-    "network": "sepolia",
-    "chainId": 11155111,
-    "transactionHash": "0x...",
-    "contractAddress": "0x...",
-    "blockNumber": 123,
-    "transactionTimestamp": "2026-09-20T08:00:00Z",
-    "explorerUrl": "https://sepolia.etherscan.io/tx/0x..."
-  }
+  "issuedAt": "2026-09-20T08:00:00Z",
+  "revokedAt": null,
+  "network": "sepolia",
+  "chainId": 11155111,
+  "contractAddress": "0x..."
 }
 ```
 
-Unknown IDs return `404`; malformed IDs return `400`. Public responses never include email, internal UUIDs, password-related data, failure internals, or private revocation notes.
+Unknown or malformed public certificate IDs return `404`. Public responses never include email, internal UUIDs, password-related data, failure internals, or private revocation notes.
+
+`GET /api/public/certificates/{certificateId}` currently returns an issued certificate only when its recomputed hash, on-chain hash, issuance time, expiry, and revocation flag agree. It includes public names, dates, derived `status`, `blockchainVerified`, and network identity. A mismatch returns `409 PROOF_MISMATCH`; unavailable RPC returns `503`. Status is computed on each request: `REVOKED` wins over `EXPIRED`, and expiry begins at 00:00 UTC on the day after `expiryDate`.
 
 ## Error envelope
 

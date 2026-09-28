@@ -85,8 +85,19 @@ public class Certificate extends AuditableEntity {
     public void setExpiryDate(LocalDate value) { requireDraft(); this.expiryDate = value; }
     public void setPdfStorageKey(String value) { this.pdfStorageKey = value; }
     public void setIssuedAt(Instant value) { this.issuedAt = value; }
-    public void setRevokedAt(Instant value) { this.revokedAt = value; }
-    public void setRevocationReason(String value) { this.revocationReason = value; }
+    public void setRevocationReason(String value) {
+        if (lifecycle != CertificateLifecycle.ISSUED || revokedAt != null) {
+            throw new IllegalStateException("Only an active issued certificate can be prepared for revocation");
+        }
+        this.revocationReason = java.util.Objects.requireNonNull(value);
+    }
+
+    public void markRevoked(Instant when) {
+        if (lifecycle != CertificateLifecycle.ISSUED || revokedAt != null || revocationReason == null) {
+            throw new IllegalStateException("Certificate cannot be revoked");
+        }
+        revokedAt = java.util.Objects.requireNonNull(when);
+    }
 
     public void beginIssuance(String hash, String version) {
         if (lifecycle != CertificateLifecycle.DRAFT && lifecycle != CertificateLifecycle.ISSUE_FAILED) {

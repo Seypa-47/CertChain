@@ -15,4 +15,7 @@ public class DisabledCertificateRegistryGateway implements CertificateRegistryGa
     @Override public String submitIssue(String key, String hash, long expiry) { throw disabled(); }
     @Override public Optional<IssueReceipt> findReceipt(String hash) { throw disabled(); }
     @Override public Optional<IssueReceipt> findIssueByKey(String key) { throw disabled(); }
+    @Override public String submitRevoke(String key) { throw disabled(); }
+    @Override public Optional<RevokeReceipt> findRevokeReceipt(String hash) { throw disabled(); }
+    @Override public Optional<RevokeReceipt> findRevokeByKey(String key) { throw disabled(); }
 }

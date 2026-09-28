@@ -35,6 +35,7 @@ import org.web3j.utils.Numeric;
 @ConditionalOnProperty(prefix = "app.blockchain", name = "enabled", havingValue = "true")
 public class Web3jCertificateRegistryGateway implements CertificateRegistryGateway {
     private static final BigInteger ISSUE_GAS_LIMIT = BigInteger.valueOf(350_000);
+    private static final BigInteger REVOKE_GAS_LIMIT = BigInteger.valueOf(200_000);
     private final BlockchainSettings settings;
     private final Web3j web3j;
     private final RawTransactionManager transactions;
@@ -107,6 +108,72 @@ public class Web3jCertificateRegistryGateway implements CertificateRegistryGatew
                 throw new BlockchainUnavailableException("Blockchain submission failed");
             }
             return sent.getTransactionHash();
+        } catch (IOException error) {
+            throw unavailable(error);
+        }
+    }
+
+    @Override
+    public String submitRevoke(String certificateKey) {
+        try {
+            Function function = new Function(CertificateRegistry.FUNC_REVOKECERTIFICATE,
+                List.of(new Bytes32(bytes32(certificateKey))), List.of());
+            EthSendTransaction sent = transactions.sendTransaction(web3j.ethGasPrice().send().getGasPrice(),
+                REVOKE_GAS_LIMIT, settings.contractAddress(), FunctionEncoder.encode(function), BigInteger.ZERO);
+            if (sent.hasError() || sent.getTransactionHash() == null) {
+                throw new BlockchainUnavailableException("Blockchain revocation submission failed");
+            }
+            return sent.getTransactionHash();
+        } catch (IOException error) {
+            throw unavailable(error);
+        }
+    }
+
+    @Override
+    public Optional<RevokeReceipt> findRevokeReceipt(String transactionHash) {
+        try {
+            EthGetTransactionReceipt result = web3j.ethGetTransactionReceipt(transactionHash).send();
+            if (result.hasError()) throw new BlockchainUnavailableException("Blockchain receipt query failed");
+            if (result.getTransactionReceipt().isEmpty()) return Optional.empty();
+            TransactionReceipt receipt = result.getTransactionReceipt().orElseThrow();
+            var block = web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(receipt.getBlockNumber()), false)
+                .send().getBlock();
+            if (block == null) throw new BlockchainUnavailableException("Blockchain block unavailable");
+            long blockNumber = receipt.getBlockNumber().longValueExact();
+            long confirmations = web3j.ethBlockNumber().send().getBlockNumber().longValueExact() - blockNumber + 1;
+            String topic = EventEncoder.encode(CertificateRegistry.CERTIFICATEREVOKED_EVENT);
+            List<RevokeEvent> events = new ArrayList<>();
+            for (Log log : receipt.getLogs()) {
+                if (log.getTopics().isEmpty() || !topic.equalsIgnoreCase(log.getTopics().getFirst())) continue;
+                var event = CertificateRegistry.getCertificateRevokedEventFromLog(log);
+                events.add(new RevokeEvent("CertificateRevoked", Numeric.toHexString(event.certificateKey),
+                    event.revokedBy, event.revokedAt.longValueExact(), log.getAddress()));
+            }
+            return Optional.of(new RevokeReceipt(receipt.getTransactionHash(), receipt.isStatusOK(),
+                actualChainId(), receipt.getTo(), blockNumber,
+                Instant.ofEpochSecond(block.getTimestamp().longValueExact()), confirmations, events));
+        } catch (IOException error) {
+            throw unavailable(error);
+        }
+    }
+
+    @Override
+    public Optional<RevokeReceipt> findRevokeByKey(String certificateKey) {
+        try {
+            EthFilter filter = new EthFilter(DefaultBlockParameter.valueOf(BigInteger.valueOf(settings.deploymentBlock())),
+                DefaultBlockParameterName.LATEST, settings.contractAddress());
+            filter.addOptionalTopics(EventEncoder.encode(CertificateRegistry.CERTIFICATEREVOKED_EVENT));
+            filter.addOptionalTopics(certificateKey);
+            EthLog response = web3j.ethGetLogs(filter).send();
+            if (response.hasError()) throw new BlockchainUnavailableException("Blockchain event query failed");
+            List<EthLog.LogResult<?>> logs = response.getLogs();
+            for (int index = logs.size() - 1; index >= 0; index--) {
+                Object raw = logs.get(index).get();
+                if (raw instanceof Log log && settings.contractAddress().equalsIgnoreCase(log.getAddress())) {
+                    return findRevokeReceipt(log.getTransactionHash());
+                }
+            }
+            return Optional.empty();
         } catch (IOException error) {
             throw unavailable(error);
         }
