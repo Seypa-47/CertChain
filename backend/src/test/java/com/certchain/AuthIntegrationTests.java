@@ -183,4 +183,22 @@ class AuthIntegrationTests {
         mvc.perform(get("/api/certificates/{id}", certificate.getId()).cookie(authCookie(other)))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("CERTIFICATE_NOT_FOUND"));
     }
+
+    @Test void issuanceEndpointRequiresAuthenticationCsrfAndTenantOwnership() throws Exception {
+        Certificate certificate = certificates.saveAndFlush(new Certificate(ids.nextId(), admin.getOrganization(),
+            "Recipient", "recipient@example.com", "Course", LocalDate.now()));
+        Csrf token = csrf();
+        mvc.perform(post("/api/certificates/{id}/issue", certificate.getId())
+            .cookie(token.cookie()).header("X-XSRF-TOKEN", token.token()))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/certificates/{id}/issue", certificate.getId())
+            .cookie(authCookie(admin)))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/certificates/{id}/issue", certificate.getId())
+            .cookie(authCookie(other), token.cookie()).header("X-XSRF-TOKEN", token.token()))
+            .andExpect(status().isNotFound());
+        mvc.perform(post("/api/certificates/{id}/issue", certificate.getId())
+            .cookie(authCookie(admin), token.cookie()).header("X-XSRF-TOKEN", token.token()))
+            .andExpect(status().isServiceUnavailable());
+    }
 }

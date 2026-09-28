@@ -75,6 +75,8 @@ app:
     contract-address: ${BLOCKCHAIN_CONTRACT_ADDRESS:}
     issuer-private-key: ${BLOCKCHAIN_ISSUER_PRIVATE_KEY:}
     confirmations: ${BLOCKCHAIN_CONFIRMATIONS:2}
+    deployment-block: ${BLOCKCHAIN_DEPLOYMENT_BLOCK:0}
+    receipt-timeout: ${BLOCKCHAIN_RECEIPT_TIMEOUT:PT30S}
 
 logging:
   level:

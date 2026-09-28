@@ -53,6 +53,8 @@ No database, JWT, SMTP, RPC credential, or private key may use the `NEXT_PUBLIC_
 | `BLOCKCHAIN_CONTRACT_ADDRESS` | No | Deployed registry address. |
 | `BLOCKCHAIN_ISSUER_PRIVATE_KEY` | Yes, critical | Backend signing key holding only `ISSUER_ROLE`. |
 | `BLOCKCHAIN_CONFIRMATIONS` | No | Receipt confirmation threshold. |
+| `BLOCKCHAIN_DEPLOYMENT_BLOCK` | No | First registry block searched for recovery events. Set to the deployment block in production. |
+| `BLOCKCHAIN_RECEIPT_TIMEOUT` | No | ISO-8601 duration for synchronous receipt polling. A timeout leaves issuance pending for reconciliation. |
 
 ## Contract deployment variables
 

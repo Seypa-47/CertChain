@@ -77,17 +77,46 @@ public class Certificate extends AuditableEntity {
     public String getRevocationReason() { return revocationReason; }
     public UUID getId() { return id; }
     public long getVersion() { return version; }
-    public void setRecipientName(String value) { this.recipientName = value; }
+    public void setRecipientName(String value) { requireDraft(); this.recipientName = value; }
     public void setRecipientEmail(String value) { this.recipientEmail = value; }
-    public void setProgramName(String value) { this.programName = value; }
+    public void setProgramName(String value) { requireDraft(); this.programName = value; }
     public void setDescription(String value) { this.description = value; }
-    public void setIssueDate(LocalDate value) { this.issueDate = value; }
-    public void setExpiryDate(LocalDate value) { this.expiryDate = value; }
-    public void setLifecycle(CertificateLifecycle value) { this.lifecycle = value; }
-    public void setCanonicalizationVersion(String value) { this.canonicalizationVersion = value; }
-    public void setCertificateHash(String value) { this.certificateHash = value; }
+    public void setIssueDate(LocalDate value) { requireDraft(); this.issueDate = value; }
+    public void setExpiryDate(LocalDate value) { requireDraft(); this.expiryDate = value; }
     public void setPdfStorageKey(String value) { this.pdfStorageKey = value; }
     public void setIssuedAt(Instant value) { this.issuedAt = value; }
     public void setRevokedAt(Instant value) { this.revokedAt = value; }
     public void setRevocationReason(String value) { this.revocationReason = value; }
+
+    public void beginIssuance(String hash, String version) {
+        if (lifecycle != CertificateLifecycle.DRAFT && lifecycle != CertificateLifecycle.ISSUE_FAILED) {
+            throw new IllegalStateException("Certificate cannot start issuance");
+        }
+        if (certificateHash != null && !certificateHash.equals(hash)) {
+            throw new IllegalStateException("Frozen certificate proof has changed");
+        }
+        if (canonicalizationVersion != null && !canonicalizationVersion.equals(version)) {
+            throw new IllegalStateException("Frozen canonicalization version has changed");
+        }
+        certificateHash = java.util.Objects.requireNonNull(hash);
+        canonicalizationVersion = java.util.Objects.requireNonNull(version);
+        lifecycle = CertificateLifecycle.ISSUING;
+    }
+
+    public void markIssued(Instant when) {
+        if (lifecycle != CertificateLifecycle.ISSUING) throw new IllegalStateException("Certificate is not issuing");
+        issuedAt = java.util.Objects.requireNonNull(when);
+        lifecycle = CertificateLifecycle.ISSUED;
+    }
+
+    public void markIssueFailed() {
+        if (lifecycle != CertificateLifecycle.ISSUING) throw new IllegalStateException("Certificate is not issuing");
+        lifecycle = CertificateLifecycle.ISSUE_FAILED;
+    }
+
+    private void requireDraft() {
+        if (lifecycle != CertificateLifecycle.DRAFT) {
+            throw new IllegalStateException("Proof fields are frozen after issuance begins");
+        }
+    }
 }

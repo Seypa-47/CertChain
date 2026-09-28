@@ -70,4 +70,51 @@ public class BlockchainTransaction extends AuditableEntity {
     public void setFailureReason(String value) { this.failureReason = value; }
     public void setSubmittedAt(Instant value) { this.submittedAt = value; }
     public void setConfirmedAt(Instant value) { this.confirmedAt = value; }
+
+    public void submitted(String hash, Instant when) {
+        if (status != BlockchainTransactionStatus.CREATED || transactionHash != null) {
+            throw new IllegalStateException("Transaction is not awaiting submission");
+        }
+        transactionHash = java.util.Objects.requireNonNull(hash);
+        submittedAt = java.util.Objects.requireNonNull(when);
+        status = BlockchainTransactionStatus.SUBMITTED;
+    }
+
+    public void confirmed(long number, Instant blockTime, Instant when) {
+        if (status != BlockchainTransactionStatus.SUBMITTED) {
+            throw new IllegalStateException("Transaction is not submitted");
+        }
+        blockNumber = number;
+        blockTimestamp = java.util.Objects.requireNonNull(blockTime);
+        confirmedAt = java.util.Objects.requireNonNull(when);
+        failureReason = null;
+        status = BlockchainTransactionStatus.CONFIRMED;
+    }
+
+    public void failed(String reason) {
+        if (status == BlockchainTransactionStatus.CONFIRMED) {
+            throw new IllegalStateException("Confirmed transaction cannot fail");
+        }
+        failureReason = java.util.Objects.requireNonNull(reason);
+        status = BlockchainTransactionStatus.FAILED;
+    }
+
+    public void recoveredSubmission(String hash, Instant when) {
+        if (transactionHash != null || (status != BlockchainTransactionStatus.CREATED
+            && status != BlockchainTransactionStatus.FAILED)) {
+            throw new IllegalStateException("Transaction cannot be recovered");
+        }
+        transactionHash = java.util.Objects.requireNonNull(hash);
+        submittedAt = java.util.Objects.requireNonNull(when);
+        failureReason = null;
+        status = BlockchainTransactionStatus.SUBMITTED;
+    }
+
+    public void reopenAfterValidation() {
+        if (status != BlockchainTransactionStatus.FAILED || transactionHash == null) {
+            throw new IllegalStateException("Failed transaction has no recoverable hash");
+        }
+        failureReason = null;
+        status = BlockchainTransactionStatus.SUBMITTED;
+    }
 }

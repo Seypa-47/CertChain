@@ -31,7 +31,7 @@
 ## Phase 4 - Draft certificate management
 
 - [ ] Create/list/view/search/update draft APIs.
-- [ ] Freeze proof-relevant fields once issuance begins.
+- [x] Freeze proof-relevant fields once issuance begins.
 - [ ] Build create, list, details, loading, empty, and error states.
 - [ ] Test validation, pagination, filtering, and authorization.
 
@@ -41,17 +41,17 @@
 - [x] Implement custom errors, events, issue/read/verify/revoke functions.
 - [x] Complete contract unit tests.
 - [x] Add and smoke-test a local Ignition deployment module.
-- [ ] Generate the Java wrapper for backend blockchain integration.
+- [x] Generate the Java wrapper for backend blockchain integration.
 - [x] Document the Sepolia deployment procedure without committing secrets.
 - [ ] Test deployment on Sepolia.
 
 ## Phase 6 - Issuance and blockchain integration
 
-- [ ] Implement versioned canonicalization and SHA-256 service.
-- [ ] Test deterministic hashing, changed fields, normalization, escaping, and ordering.
-- [ ] Implement web3j client behind a blockchain gateway interface.
-- [ ] Implement issuance lifecycle, transaction journal, receipt/event validation, and reconciliation.
-- [ ] Test failed, timed-out, duplicated, and recovered submissions.
+- [x] Implement versioned canonicalization and SHA-256 service.
+- [x] Test deterministic hashing, changed fields, normalization, escaping, and ordering.
+- [x] Implement web3j client behind a blockchain gateway interface.
+- [x] Implement issuance lifecycle, transaction journal, receipt/event validation, and reconciliation.
+- [x] Test failed, timed-out, duplicated, and recovered submissions with PostgreSQL and a local Hardhat chain.
 
 ## Phase 7 - Public verification
 

@@ -4,7 +4,7 @@ CertChain is a blockchain-based digital certificate issuing and verification pla
 
 ## Current status
 
-Phase 5 adds the access-controlled certificate proof registry, contract tests, and a local Ignition deployment module. Sepolia deployment and backend blockchain integration remain pending. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+Phase 6 adds deterministic v1 certificate hashing, the typed web3j registry gateway, a durable issuance journal with receipt reconciliation, and an admin certificate details page. A local Hardhat chain can exercise the complete issuance path. Sepolia deployment, public verification, PDF, and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
 
 ## Architecture documentation
 
@@ -100,6 +100,10 @@ cd blockchain && npm run typecheck && npm test && npm run coverage
 ```
 
 Backend tests include a Docker-independent H2 context smoke test. PostgreSQL integration tests use Testcontainers to start a fresh PostgreSQL container, apply Flyway migrations, and run Hibernate schema validation before checking database constraints, tenant queries, concurrent public ID allocation, and authentication/tenant security. Start Docker Desktop before running `cd backend && ./mvnw test` (on Windows, `cd backend; .\mvnw.cmd test`). Check the Surefire reports in `backend/target/surefire-reports/` and confirm `PostgresDomainIntegrationTests`, `AuthIntegrationTests`, and `DevBootstrapIntegrationTests` each report zero skipped tests. The main application runs Flyway on startup against PostgreSQL. To apply migrations locally, start PostgreSQL with `docker compose up -d postgres`, then run `cd backend && ./mvnw spring-boot:run`.
+
+The issuance tests use a fake gateway for failures, concurrency, and recovery. `LocalChainIntegrationIT` is an opt-in end-to-end test using a local Hardhat JSON-RPC node and a fresh PostgreSQL Testcontainer; no Sepolia funds are needed. Follow the local node and Ignition deployment instructions in [`blockchain/README.md`](blockchain/README.md), then set `CERTCHAIN_LOCAL_RPC`, `CERTCHAIN_LOCAL_CONTRACT`, and `CERTCHAIN_LOCAL_ISSUER_KEY` in the test process environment. The issuer key must match the local signer configured in Ignition. Run `cd backend && ./mvnw -Dtest=LocalChainIntegrationIT test` (Windows: `.\mvnw.cmd '-Dtest=LocalChainIntegrationIT' test`). Use `BLOCKCHAIN_ENABLED=true`, the node RPC URL, deployed address, local chain ID `31337`, and issuer key only in a local backend process when testing the UI. Set `BLOCKCHAIN_DEPLOYMENT_BLOCK` to the deployment block and use a low confirmation threshold for a local node. Never commit the key or a local deployment address.
+
+The checked-in `CertificateRegistry` Java wrapper was generated from the compiled `blockchain/artifacts/contracts/CertificateRegistry.sol/CertificateRegistry.json` ABI and bytecode using the pinned web3j 5.0.3 code generator. If the contract ABI changes, recompile the contract, export its `abi` and `bytecode` fields to `backend/target/codegen/CertificateRegistry.abi` and `.bin`, regenerate with `cd backend && ./mvnw org.codehaus.mojo:exec-maven-plugin:3.6.3:java -Dexec.mainClass=org.web3j.codegen.SolidityFunctionWrapperGenerator -Dexec.classpathScope=test -Dexec.args="-b target/codegen/CertificateRegistry.bin -a target/codegen/CertificateRegistry.abi -o target/codegen/generated -p com.certchain.blockchain.generated"`, then replace the checked-in wrapper and rerun backend/local-chain tests.
 
 ## Assignment deliverables
 

@@ -123,12 +123,12 @@ Issuance crosses PostgreSQL, Ethereum, file storage, and email, so it cannot be 
 2. Freeze immutable issue fields, build canonical data, and persist its hash.
 3. Create a `BlockchainTransaction` row with type `ISSUE` and state `CREATED`.
 4. Submit the contract call, then store the transaction hash and state `SUBMITTED` immediately.
-5. Wait for a successful receipt and validate the emitted event. On revert or timeout, persist failure information and do not set `ISSUED`.
+5. Wait briefly for a successful receipt and validate the chain, destination contract, transaction status, confirmation count, issued event, proof fields, signer, block metadata, and on-chain record. A reverted or invalid receipt records failure. A missing receipt remains `ISSUING` for reconciliation and never sets `ISSUED`.
 6. Persist the block metadata, transition the certificate to `ISSUED`, and commit.
 7. Generate QR/PDF and store their location. Artifact generation can be retried without another blockchain transaction.
 8. Send email after issuance. Email failure is logged and retryable; it does not undo an immutable issuance.
 
-If the process crashes after the chain accepts a transaction but before the database commits, a reconciliation service looks up the known transaction hash or the deterministic certificate key/event and repairs the local state. Retrying never issues a second on-chain record.
+The `CREATED` journal commits before the RPC submission; no database transaction stays open while waiting for Ethereum. If the process crashes after submission, reconciliation looks up the known transaction hash or the deterministic certificate key/event and repairs local state. A request that finds an existing on-chain key does not resubmit. The contract rejects duplicate keys, so a late transaction cannot create a second on-chain certificate. Operators must investigate a `CREATED` attempt with no discoverable event before forcing another submission, since a pending transaction may still mine. Proof fields remain frozen from the first `ISSUING` transition onward, including after a failed attempt. Expiry is the final UTC second of the stated expiry date; a null date maps to zero.
 
 Revocation follows the same journal pattern. The database is updated to revoked only after a successful receipt and validated `CertificateRevoked` event.
 

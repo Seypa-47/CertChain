@@ -2,14 +2,23 @@ package com.certchain.certificate;
 
 import java.util.Optional;
 import java.util.UUID;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CertificateRepository extends JpaRepository<Certificate, UUID> {
     Optional<Certificate> findByIdAndOrganizationId(UUID id, UUID organizationId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Certificate c where c.id = :id and c.organization.id = :organizationId")
+    Optional<Certificate> lockByIdAndOrganizationId(@Param("id") UUID id,
+        @Param("organizationId") UUID organizationId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Certificate c where c.id = :id")
+    Optional<Certificate> lockById(@Param("id") UUID id);
     Optional<Certificate> findByCertificateId(String certificateId);
     Page<Certificate> findByOrganizationId(UUID organizationId, Pageable pageable);
 

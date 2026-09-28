@@ -58,7 +58,9 @@ All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe 
 | `GET` | `/api/certificates?page=0&size=20&query=&lifecycle=&status=` | Paginated tenant-scoped list/search. |
 | `GET` | `/api/certificates/{id}` | Full authorized details by internal UUID. |
 | `PATCH` | `/api/certificates/{id}` | Update mutable draft fields only. |
-| `POST` | `/api/certificates/{id}/issue` | Start synchronous issuance for v1; idempotent against duplicate proof. |
+| `GET` | `/api/certificates/{id}/issuance` | Read issuance journal and chain metadata for an owned certificate. |
+| `POST` | `/api/certificates/{id}/issue` | Start or resume issuance; an unknown receipt returns pending state without another submission. |
+| `POST` | `/api/certificates/{id}/reconcile` | Check the receipt or on-chain event for a pending or failed attempt. |
 | `POST` | `/api/certificates/{id}/revoke` | Revoke an issued certificate with confirmation. |
 | `GET` | `/api/certificates/{id}/pdf` | Download the generated PDF after issuance. |
 
@@ -75,27 +77,28 @@ Create request:
 }
 ```
 
-Issue response `200`:
+Issue, reconciliation, and progress responses use the same shape. `POST /issue` and `POST /reconcile` return `202` while `ISSUING`, or `200` for a terminal state. The backend may return `503` when the blockchain gateway is disabled or unavailable. A chain timeout is `ISSUING`, not `ISSUED`.
 
 ```json
 {
   "id": "uuid",
   "certificateId": "CERT-2026-000001",
   "lifecycle": "ISSUED",
-  "status": "VALID",
   "certificateHash": "64-lowercase-hex-characters",
-  "verificationUrl": "https://certchain.example.com/verify/CERT-2026-000001",
-  "blockchain": {
-    "network": "sepolia",
-    "chainId": 11155111,
-    "contractAddress": "0x...",
-    "transactionHash": "0x...",
-    "blockNumber": 123,
-    "confirmedAt": "2026-09-20T08:00:00Z"
-  },
-  "emailDeliveryStatus": "SENT"
+  "transactionStatus": "CONFIRMED",
+  "transactionHash": "0x...",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "contractAddress": "0x...",
+  "blockNumber": 123,
+  "blockTimestamp": "2026-09-20T08:00:00Z",
+  "explorerUrl": "https://sepolia.etherscan.io/tx/0x...",
+  "failureReason": null,
+  "guidance": "Proof confirmed on chain."
 }
 ```
+
+`GET /api/certificates/{id}/issuance` is safe to poll. Proof-relevant fields cannot be changed after issuance starts. Issuance does not generate PDF or email in this phase, and public status is derived later rather than stored.
 
 Revoke request:
 

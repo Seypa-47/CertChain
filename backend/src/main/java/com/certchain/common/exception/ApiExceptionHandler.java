@@ -1,5 +1,6 @@
 package com.certchain.common.exception;
 
+import com.certchain.blockchain.BlockchainUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
@@ -16,6 +17,11 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(BlockchainUnavailableException.class)
+    ResponseEntity<ApiError> blockchain(HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiError.of(503,
+            "BLOCKCHAIN_UNAVAILABLE", "Blockchain service is unavailable", request.getRequestURI()));
+    }
     @ExceptionHandler(BadCredentialsException.class)
     ResponseEntity<ApiError> credentials(HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
