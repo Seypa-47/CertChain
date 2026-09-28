@@ -7,9 +7,11 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "app.storage", name = "type", havingValue = "local", matchIfMissing = true)
 public class LocalArtifactStorage implements ArtifactStorage {
     private static final Pattern KEY = Pattern.compile("certificates/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/certificate\\.pdf");
     private static final int MAX_BYTES = 10 * 1024 * 1024;

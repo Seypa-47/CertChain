@@ -95,6 +95,8 @@ The login page is at `/login`. The backend sets a short-lived HttpOnly JWT cooki
 
 Only `.env.example` templates are committed. Real database passwords, JWT keys, SMTP credentials, RPC credentials, deployment keys, and backend signing keys must remain in local or deployment secret stores. The Ethereum private key is used only by backend/deployment processes and is never prefixed with `NEXT_PUBLIC_` or sent to the browser.
 
+For a free-tier hosting plan and a step-by-step deployment, provisioning, smoke-test, backup, and rollback runbook, see [`docs/deployment/free-tier.md`](docs/deployment/free-tier.md). This is preparation until the real accounts, Sepolia wallets, public URLs, and smoke-test evidence are available. Hosted PDFs use `STORAGE_TYPE=s3` with a private bucket; local development continues to use `STORAGE_TYPE=local`. The hosted frontend uses a same-origin `/api` rewrite and the backend continues to enforce authentication, tenancy, and CSRF.
+
 ## Development commands
 
 ```bash

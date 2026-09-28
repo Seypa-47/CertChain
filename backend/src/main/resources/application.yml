@@ -28,6 +28,7 @@ spring:
           auth: ${MAIL_AUTH:false}
           starttls:
             enable: ${MAIL_STARTTLS:false}
+            required: ${MAIL_STARTTLS_REQUIRED:false}
           connectiontimeout: ${MAIL_TIMEOUT_MS:5000}
           timeout: ${MAIL_TIMEOUT_MS:5000}
           writetimeout: ${MAIL_TIMEOUT_MS:5000}
@@ -67,7 +68,14 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   storage:
+    type: ${STORAGE_TYPE:local}
     root: ${STORAGE_ROOT:./storage}
+    s3:
+      endpoint: ${STORAGE_S3_ENDPOINT:}
+      region: ${STORAGE_S3_REGION:}
+      bucket: ${STORAGE_S3_BUCKET:}
+      access-key-id: ${STORAGE_S3_ACCESS_KEY_ID:}
+      secret-access-key: ${STORAGE_S3_SECRET_ACCESS_KEY:}
   mail:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:certificates@certchain.local}
