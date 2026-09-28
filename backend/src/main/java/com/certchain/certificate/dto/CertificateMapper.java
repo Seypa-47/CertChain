@@ -1,6 +1,7 @@
 package com.certchain.certificate.dto;
 
 import com.certchain.certificate.Certificate;
+import com.certchain.certificate.CertificateLifecycle;
 import com.certchain.organization.Organization;
 import com.certchain.organization.dto.OrganizationSummary;
 import com.certchain.transaction.BlockchainTransaction;
@@ -19,7 +20,7 @@ public final class CertificateMapper {
     }
 
     public static void updateDraft(Certificate certificate, UpdateCertificateRequest request) {
-        if (certificate.getLifecycle() != com.certchain.certificate.CertificateLifecycle.DRAFT) {
+        if (certificate.getLifecycle() != CertificateLifecycle.DRAFT) {
             throw new IllegalStateException("Only draft certificates may be edited");
         }
         certificate.setRecipientName(request.recipientName());

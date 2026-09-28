@@ -1,12 +1,11 @@
 package com.certchain.certificate;
 
 import com.certchain.common.domain.AuditableEntity;
+import com.certchain.organization.Organization;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-import com.certchain.organization.Organization;
-
 
 @Entity
 @Table(name = "certificate")

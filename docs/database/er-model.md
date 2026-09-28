@@ -48,7 +48,7 @@ erDiagram
         timestamptz issued_at
         timestamptz revoked_at
         text revocation_reason
-        integer version
+        bigint version
         timestamptz created_at
         timestamptz updated_at
     }
@@ -87,7 +87,7 @@ erDiagram
     CERTIFICATE_NUMBER_SEQUENCE {
         integer sequence_year PK
         bigint next_value
-        integer version
+        bigint version
     }
 ```
 
@@ -113,6 +113,8 @@ erDiagram
 - `EmailDeliveryType`: `CERTIFICATE_ISSUED`.
 
 Public IDs use `CERT-YYYY-NNNNNN` and are unique across all organizations. Allocation uses one global row per year, with an atomic `INSERT ... ON CONFLICT ... DO UPDATE ... RETURNING`. Numbers can have gaps after a rolled-back or abandoned workflow; IDs are identifiers, not a count of completed certificates. The unique `certificate.certificate_id` constraint is the final collision guard.
+
+`next_value` ranges from 2 to 1000000: a new row returns 1 and stores 2, while returning 999999 leaves 1000000 as the exhausted marker. The allocator rejects a further request without changing the row. Flyway V2 tightens this bound without changing the already-applied V1 migration.
 
 `BlockchainTransaction` is authoritative for transaction hash, network, chain ID, contract address, block number, confirmation time, and failure details. `Certificate` does not duplicate that metadata. Public status is derived later from issued and revoked state and the current date; it is never persisted.
 

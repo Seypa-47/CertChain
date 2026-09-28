@@ -93,7 +93,7 @@ cd backend && ./mvnw test
 cd blockchain && npm test
 ```
 
-Backend tests include a Docker-independent H2 context smoke test. PostgreSQL integration tests use Testcontainers and run when Docker is available; they verify Flyway, PostgreSQL constraints, repository behavior, and concurrent public ID allocation. The main application runs Flyway on startup against PostgreSQL. To apply migrations locally, start PostgreSQL with `docker compose up -d postgres`, then run `cd backend && ./mvnw spring-boot:run`.
+Backend tests include a Docker-independent H2 context smoke test. PostgreSQL integration tests use Testcontainers to start a fresh PostgreSQL container, apply Flyway migrations, and run Hibernate schema validation before checking database constraints, tenant queries, and concurrent public ID allocation. Start Docker Desktop before running `cd backend && ./mvnw test` (on Windows, `cd backend; .\mvnw.cmd test`). The PostgreSQL tests skip when Docker is unavailable, so check the Surefire reports in `backend/target/surefire-reports/` and confirm `PostgresDomainIntegrationTests` reports zero skipped tests. The main application runs Flyway on startup against PostgreSQL. To apply migrations locally, start PostgreSQL with `docker compose up -d postgres`, then run `cd backend && ./mvnw spring-boot:run`.
 
 ## Assignment deliverables
 

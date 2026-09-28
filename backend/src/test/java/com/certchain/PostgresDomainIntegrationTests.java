@@ -26,7 +26,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@SpringBootTest(properties = {"spring.jpa.hibernate.ddl-auto=validate", "spring.flyway.enabled=true"})
 @Testcontainers(disabledWithoutDocker = true)
 class PostgresDomainIntegrationTests {
     @Container
@@ -53,7 +53,8 @@ class PostgresDomainIntegrationTests {
 
     @Test
     void migrationAndEntityMappings() {
-        assertEquals(1, jdbc.queryForObject("select count(*) from flyway_schema_history where success = true", Integer.class));
+        assertEquals(2, jdbc.queryForObject("select count(*) from flyway_schema_history where success = true", Integer.class));
+        assertEquals(1, jdbc.queryForObject("select count(*) from flyway_schema_history where version = '1' and success = true", Integer.class));
         Organization org = organization();
         AppUser user = users.saveAndFlush(new AppUser(org, "Admin", UUID.randomUUID() + "@example.com", "hash", UserRole.ORG_ADMIN));
         Certificate cert = certificate(org, ids.nextId());
@@ -71,14 +72,15 @@ class PostgresDomainIntegrationTests {
     @Test
     void databaseUniquenessAndExpiryChecks() {
         Organization org = organization();
+        Organization other = organization();
         String email = UUID.randomUUID() + "@example.com";
         users.saveAndFlush(new AppUser(org, "Admin", email, "hash", UserRole.ORG_ADMIN));
         assertTrue(users.findByEmailIgnoreCase(email.toUpperCase()).isPresent());
         assertThrows(DataIntegrityViolationException.class, () ->
-            users.saveAndFlush(new AppUser(org, "Duplicate", email.toUpperCase(), "hash", UserRole.ORG_ADMIN)));
+            users.saveAndFlush(new AppUser(other, "Duplicate", email.toUpperCase(), "hash", UserRole.ORG_ADMIN)));
         String id = ids.nextId();
         certificate(org, id);
-        assertThrows(DataIntegrityViolationException.class, () -> certificate(org, id));
+        assertThrows(DataIntegrityViolationException.class, () -> certificate(other, id));
         Certificate bad = new Certificate(ids.nextId(), org, "Bad", "bad@example.com", "Course",
             LocalDate.of(2026, 2, 1));
         bad.setExpiryDate(LocalDate.of(2026, 1, 1));
@@ -90,10 +92,14 @@ class PostgresDomainIntegrationTests {
         Organization first = organization();
         Organization second = organization();
         Certificate cert = certificate(first, ids.nextId());
+        Certificate other = certificate(second, ids.nextId());
         assertTrue(certificates.findByIdAndOrganizationId(cert.getId(), first.getId()).isPresent());
         assertTrue(certificates.findByIdAndOrganizationId(cert.getId(), second.getId()).isEmpty());
-        assertEquals(0, certificates.findByOrganizationId(second.getId(), Pageable.unpaged()).getTotalElements());
+        assertTrue(certificates.findByIdAndOrganizationId(other.getId(), first.getId()).isEmpty());
+        assertEquals(1, certificates.findByOrganizationId(second.getId(), Pageable.unpaged()).getTotalElements());
         assertEquals(1, certificates.searchByOrganization(first.getId(), "recipient",
+            Pageable.unpaged()).getTotalElements());
+        assertEquals(0, certificates.searchByOrganization(second.getId(), cert.getCertificateId(),
             Pageable.unpaged()).getTotalElements());
     }
 
@@ -117,6 +123,20 @@ class PostgresDomainIntegrationTests {
     }
 
     @Test
+    void lastCertificateNumberIsIssuedOnce() {
+        int year = 2080;
+        jdbc.update("insert into certificate_number_sequence (sequence_year, next_value, version) values (?, 999999, 0)", year);
+        CertificateIdGenerator fixed = new CertificateIdGenerator(jdbc,
+            Clock.fixed(Instant.parse("2080-06-01T00:00:00Z"), ZoneOffset.UTC));
+        assertEquals("CERT-2080-999999", fixed.nextId());
+        assertThrows(IllegalStateException.class, fixed::nextId);
+        assertEquals(1000000L, jdbc.queryForObject(
+            "select next_value from certificate_number_sequence where sequence_year = ?", Long.class, year));
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(
+            "update certificate_number_sequence set next_value = 1000001 where sequence_year = ?", year));
+    }
+
+    @Test
     void optimisticLockingAndTransactionHashUniqueness() {
         Organization org = organization();
         Certificate cert = certificate(org, ids.nextId());
@@ -129,7 +149,8 @@ class PostgresDomainIntegrationTests {
             "sepolia", 11155111L, "0x" + "b".repeat(40));
         first.setTransactionHash("0x" + "c".repeat(64));
         transactions.saveAndFlush(first);
-        BlockchainTransaction second = new BlockchainTransaction(cert, BlockchainTransactionType.REVOKE,
+        Certificate other = certificate(organization(), ids.nextId());
+        BlockchainTransaction second = new BlockchainTransaction(other, BlockchainTransactionType.ISSUE,
             "sepolia", 11155111L, "0x" + "b".repeat(40));
         second.setTransactionHash(first.getTransactionHash());
         assertThrows(DataIntegrityViolationException.class, () -> transactions.saveAndFlush(second));

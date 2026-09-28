@@ -20,6 +20,9 @@ public class CertificateNumberSequence {
 
     protected CertificateNumberSequence() {}
     public CertificateNumberSequence(int sequenceYear, long nextValue) {
+        if (sequenceYear < 1 || sequenceYear > 9999 || nextValue < 2 || nextValue > 1000000) {
+            throw new IllegalArgumentException("Certificate sequence values are out of range");
+        }
         this.sequenceYear = sequenceYear;
         this.nextValue = nextValue;
     }

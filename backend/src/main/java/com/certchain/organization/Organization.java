@@ -2,10 +2,7 @@ package com.certchain.organization;
 
 import com.certchain.common.domain.AuditableEntity;
 import jakarta.persistence.*;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.util.UUID;
-
 
 @Entity
 @Table(name = "organization")

@@ -1,12 +1,9 @@
 package com.certchain.user;
 
 import com.certchain.common.domain.AuditableEntity;
-import jakarta.persistence.*;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.UUID;
 import com.certchain.organization.Organization;
-
+import jakarta.persistence.*;
+import java.util.UUID;
 
 @Entity
 @Table(name = "app_user")

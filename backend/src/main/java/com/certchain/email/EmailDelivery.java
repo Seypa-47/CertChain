@@ -1,12 +1,10 @@
 package com.certchain.email;
 
+import com.certchain.certificate.Certificate;
 import com.certchain.common.domain.AuditableEntity;
 import jakarta.persistence.*;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.UUID;
-import com.certchain.certificate.Certificate;
-
 
 @Entity
 @Table(name = "email_delivery")

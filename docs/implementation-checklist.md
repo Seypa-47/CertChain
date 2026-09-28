@@ -17,7 +17,7 @@
 - [x] Add Flyway migrations, constraints, and indexes.
 - [x] Implement entities, enums, repositories, DTOs, and mappers.
 - [x] Implement concurrency-safe certificate ID allocation.
-- [ ] Add repository and container-backed integration tests.
+- [x] Add repository and container-backed integration tests.
 
 ## Phase 3 - Authentication and tenancy
 
