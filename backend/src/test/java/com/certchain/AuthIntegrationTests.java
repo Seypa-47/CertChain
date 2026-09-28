@@ -355,4 +355,26 @@ class AuthIntegrationTests {
         mvc.perform(get("/api/certificates/{id}/pdf", certificate.getId()).cookie(outsider))
             .andExpect(status().isNotFound());
     }
+
+    @Test void emailStatusAndResendRequireAuthenticationCsrfAndTenantOwnership() throws Exception {
+        Certificate certificate = certificates.saveAndFlush(new Certificate(ids.nextId(), admin.getOrganization(),
+            "Recipient", "private@example.com", "Course", LocalDate.now()));
+        Cookie owner = authCookie(admin);
+        Cookie outsider = authCookie(other);
+        Csrf token = csrf();
+        mvc.perform(get("/api/certificates/{id}/email", certificate.getId()))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/certificates/{id}/email", certificate.getId()).cookie(outsider))
+            .andExpect(status().isNotFound());
+        mvc.perform(get("/api/certificates/{id}/email", certificate.getId()).cookie(owner))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.attemptCount").value(0));
+        mvc.perform(post("/api/certificates/{id}/email/resend", certificate.getId())
+            .cookie(owner)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/certificates/{id}/email/resend", certificate.getId())
+            .cookie(outsider, token.cookie()).header("X-XSRF-TOKEN", token.token()))
+            .andExpect(status().isNotFound());
+        mvc.perform(post("/api/certificates/{id}/email/resend", certificate.getId())
+            .cookie(owner, token.cookie()).header("X-XSRF-TOKEN", token.token()))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("EMAIL_DISABLED"));
+    }
 }
