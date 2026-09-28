@@ -8,6 +8,7 @@
     "test": "hardhat test",
     "test:solidity": "hardhat test solidity",
     "test:typescript": "hardhat test mocha",
+    "coverage": "hardhat test --coverage",
     "typecheck": "hardhat build && tsc --noEmit"
   },
   "devDependencies": {

@@ -1,0 +1,6 @@
+{
+  "CertificateRegistry": {
+    "admin": "<ADMIN_ADDRESS>",
+    "issuer": "<ISSUER_ADDRESS>"
+  }
+}

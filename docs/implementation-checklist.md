@@ -37,11 +37,13 @@
 
 ## Phase 5 - Smart contract
 
-- [ ] Implement `CertificateRegistry.sol` with role-based access control.
-- [ ] Implement custom errors, events, issue/read/verify/revoke functions.
-- [ ] Complete contract unit tests.
-- [ ] Add local deployment module and generated Java wrapper process.
-- [ ] Document and test Sepolia deployment without committing secrets.
+- [x] Implement `CertificateRegistry.sol` with role-based access control.
+- [x] Implement custom errors, events, issue/read/verify/revoke functions.
+- [x] Complete contract unit tests.
+- [x] Add and smoke-test a local Ignition deployment module.
+- [ ] Generate the Java wrapper for backend blockchain integration.
+- [x] Document the Sepolia deployment procedure without committing secrets.
+- [ ] Test deployment on Sepolia.
 
 ## Phase 6 - Issuance and blockchain integration
 

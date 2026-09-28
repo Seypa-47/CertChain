@@ -60,9 +60,7 @@ No database, JWT, SMTP, RPC credential, or private key may use the `NEXT_PUBLIC_
 |---|---:|---|
 | `SEPOLIA_RPC_URL` | Yes | Deployment RPC endpoint. |
 | `SEPOLIA_DEPLOYER_PRIVATE_KEY` | Yes, critical | Deployment wallet key; keep separate from the backend issuer when possible. |
-| `CONTRACT_ADMIN_ADDRESS` | No | Address receiving `DEFAULT_ADMIN_ROLE`. |
-| `ISSUER_ADDRESS` | No | Backend signer address receiving `ISSUER_ROLE`. |
 | `ETHERSCAN_API_KEY` | Yes | Optional contract source verification credential. |
 
-Production secrets belong in hosting-provider secret storage. Example files contain names and nonfunctional placeholders only.
+The Ignition module receives explicit `admin` and `issuer` constructor addresses from ignored `blockchain/ignition/parameters.json`, copied from `parameters.example.json`. The admin receives `DEFAULT_ADMIN_ROLE`; the backend signer receives `ISSUER_ROLE`. Production secrets belong in hosting-provider secret storage. Example files contain names and nonfunctional placeholders only.
 

@@ -20,6 +20,8 @@
 .env
 .env.*
 !.env.example
+/ignition/parameters.json
+/ignition/deployments
 
 # Hardhat coverage reports
 /coverage

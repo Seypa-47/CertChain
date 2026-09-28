@@ -4,7 +4,7 @@ CertChain is a blockchain-based digital certificate issuing and verification pla
 
 ## Current status
 
-Phase 3 adds organization administrator authentication, tenant-scoped reads, and a protected login/portal shell. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+Phase 5 adds the access-controlled certificate proof registry, contract tests, and a local Ignition deployment module. Sepolia deployment and backend blockchain integration remain pending. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
 
 ## Architecture documentation
 
@@ -96,7 +96,7 @@ cd frontend && npm run lint && npm run build && npm test
 cd backend && ./mvnw test
 
 # Blockchain
-cd blockchain && npm test
+cd blockchain && npm run typecheck && npm test && npm run coverage
 ```
 
 Backend tests include a Docker-independent H2 context smoke test. PostgreSQL integration tests use Testcontainers to start a fresh PostgreSQL container, apply Flyway migrations, and run Hibernate schema validation before checking database constraints, tenant queries, concurrent public ID allocation, and authentication/tenant security. Start Docker Desktop before running `cd backend && ./mvnw test` (on Windows, `cd backend; .\mvnw.cmd test`). Check the Surefire reports in `backend/target/surefire-reports/` and confirm `PostgresDomainIntegrationTests`, `AuthIntegrationTests`, and `DevBootstrapIntegrationTests` each report zero skipped tests. The main application runs Flyway on startup against PostgreSQL. To apply migrations locally, start PostgreSQL with `docker compose up -d postgres`, then run `cd backend && ./mvnw spring-boot:run`.
