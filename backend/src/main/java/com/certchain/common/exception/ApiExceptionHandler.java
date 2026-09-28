@@ -13,6 +13,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -55,6 +56,12 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiError> malformed(HttpServletRequest request) {
         return ResponseEntity.badRequest().body(ApiError.of(400, "VALIDATION_ERROR",
             "Malformed request body", request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiError> invalidParameter(HttpServletRequest request) {
+        return ResponseEntity.badRequest().body(ApiError.of(400, "VALIDATION_ERROR",
+            "Invalid request parameter", request.getRequestURI()));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

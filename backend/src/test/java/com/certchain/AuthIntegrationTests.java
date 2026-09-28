@@ -228,4 +228,103 @@ class AuthIntegrationTests {
             .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CERTIFICATE_NOT_ISSUED"));
     }
+
+    private String draftBody(String name, String email, String program, String issueDate, String expiryDate) {
+        return "{\"recipientName\":\"" + name + "\",\"recipientEmail\":\"" + email
+            + "\",\"programName\":\"" + program + "\",\"description\":\"Training completed\","
+            + "\"issueDate\":\"" + issueDate + "\",\"expiryDate\":"
+            + (expiryDate == null ? "null" : "\"" + expiryDate + "\"") + "}";
+    }
+
+    @Test void createsListsSearchesAndUpdatesTenantDrafts() throws Exception {
+        Cookie auth = authCookie(admin);
+        Csrf token = csrf();
+        String body = draftBody("  Ada   Lovelace ", " ADA@Example.COM ", "  Data   Science ",
+            LocalDate.now().toString(), null);
+        MockHttpServletResponse created = mvc.perform(post("/api/certificates")
+            .cookie(auth, token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated()).andExpect(header().exists("Location"))
+            .andExpect(jsonPath("$.recipientName").value("Ada Lovelace"))
+            .andExpect(jsonPath("$.recipientEmail").value("ada@example.com"))
+            .andExpect(jsonPath("$.lifecycle").value("DRAFT"))
+            .andReturn().getResponse();
+        var json = new tools.jackson.databind.ObjectMapper().readTree(created.getContentAsString());
+        String id = json.get("id").asText();
+        String publicId = json.get("certificateId").asText();
+        assertTrue(publicId.matches("CERT-\\d{4}-\\d{6}"));
+        mvc.perform(get("/api/certificates/{id}", id).cookie(auth))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.certificateId").value(publicId));
+        mvc.perform(get("/api/certificates").cookie(auth)
+            .param("query", "Ada").param("lifecycle", "DRAFT").param("size", "1"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.content[0].certificateId").value(publicId));
+        mvc.perform(get("/api/certificates").cookie(auth).param("query", "Missing"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/certificates").cookie(auth).param("query", "%"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/certificates").cookie(auth).param("lifecycle", "ISSUED"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        certificates.saveAndFlush(new Certificate(ids.nextId(), admin.getOrganization(),
+            "Second", "second@example.com", "Course", LocalDate.now()));
+        certificates.saveAndFlush(new Certificate(ids.nextId(), other.getOrganization(),
+            "Other Tenant", "other@example.com", "Course", LocalDate.now()));
+        mvc.perform(get("/api/certificates").cookie(auth).param("size", "1").param("page", "1"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content.length()").value(1));
+        mvc.perform(get("/api/certificates").cookie(auth).param("query", "Other Tenant"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        String changed = draftBody("Ada Changed", "ada@example.com", "Data Science",
+            LocalDate.now().toString(), null);
+        mvc.perform(patch("/api/certificates/{id}", id).cookie(auth, token.cookie())
+            .header("X-XSRF-TOKEN", token.token()).contentType(MediaType.APPLICATION_JSON).content(changed))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.certificateId").value(publicId))
+            .andExpect(jsonPath("$.recipientName").value("Ada Changed"));
+        mvc.perform(get("/api/certificates").cookie(auth).param("sort", "passwordHash"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/certificates").cookie(auth).param("size", "101"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/certificates").cookie(auth).param("lifecycle", "UNKNOWN"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        mvc.perform(get("/api/certificates/{id}", "invalid-uuid").cookie(auth))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test void draftWritesValidateAndEnforceTenantAndLifecycle() throws Exception {
+        Certificate certificate = certificates.saveAndFlush(new Certificate(ids.nextId(), admin.getOrganization(),
+            "Recipient", "recipient@example.com", "Course", LocalDate.now()));
+        Csrf token = csrf();
+        Cookie adminCookie = authCookie(admin);
+        String valid = draftBody("Recipient", "recipient@example.com", "Course", LocalDate.now().toString(), null);
+        mvc.perform(get("/api/certificates")) .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/certificates").cookie(token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(valid)).andExpect(status().isUnauthorized());
+        mvc.perform(patch("/api/certificates/{id}", certificate.getId())
+            .cookie(authCookie(other), token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(valid)).andExpect(status().isNotFound());
+        String invalid = draftBody(" ", "bad-email", "Course", LocalDate.now().toString(), null);
+        mvc.perform(post("/api/certificates").cookie(adminCookie, token.cookie())
+            .header("X-XSRF-TOKEN", token.token()).contentType(MediaType.APPLICATION_JSON).content(invalid))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        String badExpiry = draftBody("Recipient", "recipient@example.com", "Course",
+            LocalDate.now().toString(), LocalDate.now().minusDays(1).toString());
+        mvc.perform(post("/api/certificates").cookie(adminCookie, token.cookie())
+            .header("X-XSRF-TOKEN", token.token()).contentType(MediaType.APPLICATION_JSON).content(badExpiry))
+            .andExpect(status().isBadRequest());
+        String future = draftBody("Recipient", "recipient@example.com", "Course",
+            LocalDate.now().plusDays(1).toString(), null);
+        mvc.perform(post("/api/certificates").cookie(adminCookie, token.cookie())
+            .header("X-XSRF-TOKEN", token.token()).contentType(MediaType.APPLICATION_JSON).content(future))
+            .andExpect(status().isBadRequest());
+        String longDescription = valid.replace("Training completed", "a".repeat(2001));
+        mvc.perform(post("/api/certificates").cookie(adminCookie, token.cookie())
+            .header("X-XSRF-TOKEN", token.token()).contentType(MediaType.APPLICATION_JSON).content(longDescription))
+            .andExpect(status().isBadRequest());
+        certificate.beginIssuance("a".repeat(64), "v1");
+        certificates.saveAndFlush(certificate);
+        mvc.perform(patch("/api/certificates/{id}", certificate.getId())
+            .cookie(adminCookie, token.cookie()).header("X-XSRF-TOKEN", token.token())
+            .contentType(MediaType.APPLICATION_JSON).content(valid))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CERTIFICATE_NOT_DRAFT"));
+    }
 }

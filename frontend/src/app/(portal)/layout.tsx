@@ -30,6 +30,13 @@ export default async function PortalLayout({ children }: { children: ReactNode }
             </div>
           </div>
         </header>
+        <nav aria-label="Portal navigation" className="border-b border-slate-200 bg-white">
+          <div className="mx-auto flex max-w-6xl flex-wrap gap-5 px-6 py-3 text-sm font-medium">
+            <Link href="/dashboard" className="text-teal-900 hover:underline">Dashboard</Link>
+            <Link href="/certificates" className="text-teal-900 hover:underline">Certificates</Link>
+            <Link href="/certificates/new" className="text-teal-900 hover:underline">New certificate</Link>
+          </div>
+        </nav>
         {children}
       </div>
     </AuthSessionGuard>

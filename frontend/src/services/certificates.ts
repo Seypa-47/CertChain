@@ -25,6 +25,28 @@ export type CertificateDetails = {
   }>;
 };
 
+export type CertificateListItem = Pick<CertificateDetails,
+  "id" | "certificateId" | "recipientName" | "programName" | "issueDate" | "expiryDate" | "lifecycle"> & {
+  createdAt: string;
+};
+
+export type CertificatePage = {
+  content: CertificateListItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type DraftCertificateInput = {
+  recipientName: string;
+  recipientEmail: string;
+  programName: string;
+  description: string | null;
+  issueDate: string;
+  expiryDate: string | null;
+};
+
 export type IssueProgress = {
   id: string;
   certificateId: string;
@@ -56,6 +78,36 @@ export async function getCertificate(id: string): Promise<CertificateDetails> {
     credentials: "include", cache: "no-store",
   }));
   return (await response.json()) as CertificateDetails;
+}
+
+export async function listCertificates(params: {
+  page: number; size: number; query?: string; lifecycle?: CertificateLifecycle | "";
+}): Promise<CertificatePage> {
+  const search = new URLSearchParams({ page: String(params.page), size: String(params.size),
+    query: params.query ?? "", sort: "createdAt", direction: "desc" });
+  if (params.lifecycle) search.set("lifecycle", params.lifecycle);
+  const response = await checked(await fetch(`${apiBase}/certificates?${search}`, {
+    credentials: "include", cache: "no-store",
+  }));
+  return (await response.json()) as CertificatePage;
+}
+
+async function writeDraft(path: string, method: "POST" | "PATCH", values: DraftCertificateInput): Promise<CertificateDetails> {
+  const csrf = await getCsrfToken();
+  const response = await checked(await fetch(`${apiBase}${path}`, {
+    method, credentials: "include", cache: "no-store",
+    headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": csrf },
+    body: JSON.stringify(values),
+  }));
+  return (await response.json()) as CertificateDetails;
+}
+
+export function createDraft(values: DraftCertificateInput): Promise<CertificateDetails> {
+  return writeDraft("/certificates", "POST", values);
+}
+
+export function updateDraft(id: string, values: DraftCertificateInput): Promise<CertificateDetails> {
+  return writeDraft(`/certificates/${encodeURIComponent(id)}`, "PATCH", values);
 }
 
 export async function getIssueProgress(id: string): Promise<IssueProgress> {

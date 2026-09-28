@@ -1,12 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getCertificate, getIssueProgress, issueCertificate, reconcileCertificate,
   getRevokeProgress, revokeCertificate, reconcileRevocation,
+  updateDraft,
   type CertificateDetails, type IssueProgress, type RevokeProgress,
 } from "@/services/certificates";
+import { CertificateForm } from "@/components/certificate-form";
 
 export default function CertificateDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +18,8 @@ export default function CertificateDetailsPage() {
   const [revocation, setRevocation] = useState<RevokeProgress | null>(null);
   const [revokeConfirming, setRevokeConfirming] = useState(false);
   const [reason, setReason] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -114,10 +119,30 @@ export default function CertificateDetailsPage() {
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-6 py-12">
       <div>
+        <Link href="/certificates" className="text-sm font-medium text-teal-800 underline">← All certificates</Link>
         <p className="text-sm font-semibold uppercase tracking-widest text-teal-800">Certificate details</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">{certificate.certificateId}</h1>
         <p className="mt-2 text-slate-600">{certificate.organization.name}</p>
       </div>
+
+      {saved && <p role="status" className="rounded-lg bg-teal-50 p-3 text-sm text-teal-900">Draft saved successfully.</p>}
+
+      {lifecycle === "DRAFT" && <section aria-labelledby="draft-edit-heading" className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div><h2 id="draft-edit-heading" className="text-xl font-semibold text-slate-950">Draft details</h2>
+            <p className="text-sm text-slate-600">The public ID stays the same when you edit this draft.</p></div>
+          {!editing && <button type="button" onClick={() => { setSaved(false); setEditing(true); }}
+            className="rounded-lg border border-teal-800 px-4 py-2 font-medium text-teal-900">Edit draft</button>}
+        </div>
+        {editing && <CertificateForm key={certificate.id} submitLabel="Save changes" onCancel={() => setEditing(false)}
+          initial={{ recipientName: certificate.recipientName, recipientEmail: certificate.recipientEmail,
+            programName: certificate.programName, description: certificate.description ?? "",
+            issueDate: certificate.issueDate, expiryDate: certificate.expiryDate ?? "" }}
+          onSave={async (values) => {
+            const updated = await updateDraft(id, values);
+            setCertificate(updated); setEditing(false); setSaved(true);
+          }} />}
+      </section>}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="proof-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">

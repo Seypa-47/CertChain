@@ -30,10 +30,10 @@
 
 ## Phase 4 - Draft certificate management
 
-- [ ] Create/list/view/search/update draft APIs.
+- [x] Create/list/view/search/update draft APIs.
 - [x] Freeze proof-relevant fields once issuance begins.
-- [ ] Build create, list, details, loading, empty, and error states.
-- [ ] Test validation, pagination, filtering, and authorization.
+- [x] Build create, list, details, loading, empty, and error states.
+- [x] Test validation, pagination, filtering, and authorization.
 
 ## Phase 5 - Smart contract
 

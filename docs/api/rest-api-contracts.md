@@ -55,7 +55,7 @@ All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe 
 | `PATCH` | `/api/organization` | Update allowed profile fields. |
 | `GET` | `/api/dashboard` | Counts and recent certificates from real data. |
 | `POST` | `/api/certificates` | Create a draft. Server allocates the certificate ID. |
-| `GET` | `/api/certificates?page=0&size=20&query=&lifecycle=&status=` | Paginated tenant-scoped list/search. |
+| `GET` | `/api/certificates?page=0&size=20&query=&lifecycle=&sort=createdAt&direction=desc` | Paginated tenant-scoped list/search. |
 | `GET` | `/api/certificates/{id}` | Full authorized details by internal UUID. |
 | `PATCH` | `/api/certificates/{id}` | Update mutable draft fields only. |
 | `GET` | `/api/certificates/{id}/issuance` | Read issuance journal and chain metadata for an owned certificate. |
@@ -78,6 +78,12 @@ Create request:
   "expiryDate": "2029-09-20"
 }
 ```
+
+`POST /api/certificates` returns `201`, a `Location` header, and the full `CertificateResponse`. The server generates `certificateId` using the global yearly sequence; clients cannot submit or change it. `PATCH /api/certificates/{id}` accepts the same fields and returns the updated response only while lifecycle is `DRAFT`; otherwise it returns `409 CERTIFICATE_NOT_DRAFT`. Unknown or cross-tenant UUIDs return the same `404 CERTIFICATE_NOT_FOUND` envelope.
+
+Names and program are required and limited to 200 and 300 characters. Recipient email must be valid and at most 320 characters. Description is optional and limited to 2000 characters. Issue date is required and cannot be in the future; expiry may be null but cannot precede issue date. The backend trims and normalizes name/program text, lowercases email, and trims description. Invalid requests return `400 VALIDATION_ERROR` with field issues. Draft create/update does not compute a proof hash.
+
+The list returns `{ "content": [...], "page": 0, "size": 20, "totalElements": 0, "totalPages": 0 }`. Each item contains internal UUID, public ID, recipient, program, issue/expiry dates, lifecycle, and creation time. `page` starts at 0, `size` must be 1–100, and `query` is at most 200 characters. Search matches recipient name, program, and public ID case-insensitively, treating `%` and `_` literally. `lifecycle` filters stored lifecycle only; public validity is a separate derived concept. Sort fields are limited to `createdAt`, `certificateId`, `recipientName`, `programName`, `issueDate`, and `lifecycle`; direction is `asc` or `desc`. Invalid list parameters return `400`.
 
 Issue, reconciliation, and progress responses use the same shape. `POST /issue` and `POST /reconcile` return `202` while `ISSUING`, or `200` for a terminal state. The backend may return `503` when the blockchain gateway is disabled or unavailable. A chain timeout is `ISSUING`, not `ISSUED`.
 

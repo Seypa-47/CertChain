@@ -6,12 +6,13 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface CertificateRepository extends JpaRepository<Certificate, UUID> {
+public interface CertificateRepository extends JpaRepository<Certificate, UUID>, JpaSpecificationExecutor<Certificate> {
     Optional<Certificate> findByIdAndOrganizationId(UUID id, UUID organizationId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Certificate c where c.id = :id and c.organization.id = :organizationId")
