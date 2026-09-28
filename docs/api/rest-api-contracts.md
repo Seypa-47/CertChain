@@ -65,6 +65,8 @@ All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe 
 | `GET` | `/api/certificates/{id}/revocation` | Read the private revocation journal state. |
 | `POST` | `/api/certificates/{id}/revocation/reconcile` | Recheck a pending or failed revocation without resubmitting. |
 | `GET` | `/api/certificates/{id}/pdf` | Download the generated PDF after issuance. |
+| `GET` | `/api/certificates/{id}/pdf/status` | Read artifact state without triggering generation. |
+| `POST` | `/api/certificates/{id}/pdf/retry` | Regenerate a missing or failed artifact without resubmitting a chain transaction. |
 
 Create request:
 
@@ -102,11 +104,13 @@ Issue, reconciliation, and progress responses use the same shape. `POST /issue` 
   "blockTimestamp": "2026-09-20T08:00:00Z",
   "explorerUrl": "https://sepolia.etherscan.io/tx/0x...",
   "failureReason": null,
-  "guidance": "Proof confirmed on chain."
+  "guidance": "Proof confirmed on chain.",
+  "artifactStatus": "READY",
+  "artifactError": null
 }
 ```
 
-`GET /api/certificates/{id}/issuance` is safe to poll. Proof-relevant fields cannot be changed after issuance starts. Issuance does not generate PDF or email in this phase, and public status is derived later rather than stored.
+`GET /api/certificates/{id}/issuance` is safe to poll. Proof-relevant fields cannot be changed after issuance starts. Once issuance is confirmed, PDF generation runs separately; a PDF failure leaves blockchain issuance intact and appears as `artifactStatus: "FAILED"`. `GET /pdf/status` returns `{ "status": "PENDING|READY|FAILED", "error": null|string }`. `POST /pdf/retry` needs CSRF and is idempotent when the file exists. `GET /pdf` returns an attachment only for the owning authenticated organization and an issued certificate with a ready artifact. Unknown and cross-tenant IDs return 404; drafts return `409 CERTIFICATE_NOT_ISSUED`; unavailable artifacts return `409 ARTIFACT_NOT_READY`. Recipient and public PDF download are intentionally unavailable until an explicit delivery/access policy is implemented. The public verification page remains available without a PDF.
 
 Revoke request:
 

@@ -29,6 +29,8 @@
 	<properties>
 		<java.version>21</java.version>
 		<web3j.version>5.0.3</web3j.version>
+		<pdfbox.version>3.0.8</pdfbox.version>
+		<zxing.version>3.5.4</zxing.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -71,6 +73,21 @@
 			<groupId>org.web3j</groupId>
 			<artifactId>core</artifactId>
 			<version>${web3j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>${pdfbox.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>core</artifactId>
+			<version>${zxing.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>javase</artifactId>
+			<version>${zxing.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.web3j</groupId>

@@ -4,7 +4,7 @@ CertChain is a blockchain-based digital certificate issuing and verification pla
 
 ## Current status
 
-The portal supports tenant-scoped draft creation, search, editing, and certificate details. Public visitors can search certificate IDs at `/verify` and inspect confirmed blockchain proof without an account. Phase 9 adds confirmed, journaled certificate revocation and dynamic expiration. A local Hardhat chain can exercise issuance and revocation. Sepolia deployment, PDF, and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
+The portal supports tenant-scoped draft creation, search, editing, certificate details, and PDF download after confirmed issuance. Public visitors can search certificate IDs at `/verify` and inspect confirmed blockchain proof without an account. Phase 9 adds confirmed, journaled certificate revocation and dynamic expiration. A local Hardhat chain can exercise issuance and revocation. Sepolia deployment and email remain future work. The detailed phased checklist is in [`docs/implementation-checklist.md`](docs/implementation-checklist.md).
 
 ## Architecture documentation
 
@@ -22,6 +22,7 @@ The portal supports tenant-scoped draft creation, search, editing, and certifica
 - PostgreSQL
 - Solidity, Hardhat, OpenZeppelin, Ethereum Sepolia, web3j
 - PDFBox, ZXing, JavaMailSender (introduced in their implementation phases)
+- Bundled Noto Sans fonts under the SIL Open Font License for certificate PDFs
 
 ## Prerequisites
 
@@ -79,6 +80,8 @@ Maven does not need to be installed globally; the repository includes the Maven 
    ```
 
 The frontend defaults to `http://localhost:3000`, the backend to `http://localhost:8080`, and the backend health endpoint to `http://localhost:8080/actuator/health`.
+
+Certificate PDFs use `STORAGE_ROOT` for private local storage and `FRONTEND_BASE_URL` to build the exact public verification URL inside the QR code. Set the latter to your HTTPS frontend origin in deployment. The local storage key stays in PostgreSQL; files are served only through the authenticated, tenant-scoped PDF endpoint. Recipient/public PDF downloads are disabled. The renderer accepts a small PNG/JPEG data URI as an optional organization logo; it does not fetch external logo URLs. The test fixture in [`docs/screenshots/sample-certificate.pdf`](docs/screenshots/sample-certificate.pdf) contains synthetic data only.
 
 The login page is at `/login`. The backend sets a short-lived HttpOnly JWT cookie and never returns the token in JSON. The browser calls `GET /api/auth/csrf` before login, logout, and later unsafe writes, then sends the returned token as `X-XSRF-TOKEN` with credentials. The portal performs a server-side `/api/auth/me` check and a client recheck; backend authorization remains authoritative. Stateless logout clears the cookie. A copied token remains valid until its short expiry, so protect the signing key and use HTTPS. For separate frontend and API subdomains, configure the cookie domain and SameSite mode to match the deployment; `SameSite=None` requires Secure. Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin(s), never `*`.
 

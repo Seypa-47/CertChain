@@ -6,6 +6,8 @@ import com.certchain.blockchain.CertificateRegistryGateway.ChainIdentity;
 import com.certchain.blockchain.CertificateRegistryGateway.IssueReceipt;
 import com.certchain.blockchain.InvalidBlockchainReceiptException;
 import com.certchain.blockchain.IssueReceiptValidator;
+import com.certchain.artifact.CertificateArtifactService;
+import com.certchain.artifact.CertificateArtifactService.ArtifactView;
 import com.certchain.certificate.IssuancePersistence.Snapshot;
 import com.certchain.transaction.BlockchainTransactionStatus;
 import java.time.Duration;
@@ -21,41 +23,44 @@ public class IssuanceService {
     private final IssueReceiptValidator validator;
     private final int confirmations;
     private final Duration receiptTimeout;
+    private final CertificateArtifactService artifacts;
 
     public IssuanceService(CertificateRegistryGateway gateway, IssuancePersistence journal,
                            IssueReceiptValidator validator,
                            @Value("${app.blockchain.confirmations}") int confirmations,
-                           @Value("${app.blockchain.receipt-timeout}") Duration receiptTimeout) {
+                           @Value("${app.blockchain.receipt-timeout}") Duration receiptTimeout,
+                           CertificateArtifactService artifacts) {
         this.gateway = gateway;
         this.journal = journal;
         this.validator = validator;
         this.confirmations = confirmations;
         this.receiptTimeout = receiptTimeout;
+        this.artifacts = artifacts;
     }
 
     public IssueProgress issue(UUID certificateId, UUID organizationId) {
         Snapshot current = journal.snapshot(certificateId, organizationId);
         ChainIdentity chain = gateway.identity();
-        if (current.lifecycle() == CertificateLifecycle.ISSUED) return progress(current, chain);
+        if (current.lifecycle() == CertificateLifecycle.ISSUED) return completedProgress(current, chain);
 
         if (current.lifecycle() == CertificateLifecycle.ISSUING
             || current.lifecycle() == CertificateLifecycle.ISSUE_FAILED) {
             current = reconcileSnapshot(current, chain);
             if (current.lifecycle() == CertificateLifecycle.ISSUED
-                || current.lifecycle() == CertificateLifecycle.ISSUING) return progress(current, chain);
+                || current.lifecycle() == CertificateLifecycle.ISSUING) return completedProgress(current, chain);
         }
 
         // A failed attempt can only be retried after checking the chain. A proof without a
         // validated event is never submitted again or silently promoted to ISSUED.
         if (gateway.findCertificate(current.certificateKey()).isPresent()) {
-            return progress(current, chain);
+            return completedProgress(current, chain);
         }
         IssuancePersistence.Prepared prepared = journal.begin(certificateId, organizationId, chain);
         Snapshot attempt = prepared.snapshot();
         if (!prepared.created() || attempt.lifecycle() != CertificateLifecycle.ISSUING
             || attempt.transactionId() == null
             || attempt.transactionStatus() != BlockchainTransactionStatus.CREATED) {
-            return progress(attempt, chain);
+            return completedProgress(attempt, chain);
         }
 
         String transactionHash;
@@ -65,16 +70,16 @@ public class IssuanceService {
         } catch (BlockchainUnavailableException failure) {
             // The RPC may have accepted the transaction before losing the response.
             // Keep CREATED/ISSUING so reconciliation searches by deterministic key.
-            return progress(journal.snapshot(certificateId, organizationId), chain);
+            return completedProgress(journal.snapshot(certificateId, organizationId), chain);
         }
         journal.submitted(certificateId, attempt.transactionId(), transactionHash);
-        return progress(waitForReceipt(journal.snapshot(certificateId, organizationId), chain), chain);
+        return completedProgress(waitForReceipt(journal.snapshot(certificateId, organizationId), chain), chain);
     }
 
     public IssueProgress reconcile(UUID certificateId, UUID organizationId) {
         Snapshot snapshot = journal.snapshot(certificateId, organizationId);
         ChainIdentity chain = gateway.identity();
-        return progress(reconcileSnapshot(snapshot, chain), chain);
+        return completedProgress(reconcileSnapshot(snapshot, chain), chain);
     }
 
     public IssueProgress progress(UUID certificateId, UUID organizationId) {
@@ -134,6 +139,7 @@ public class IssuanceService {
     }
 
     private IssueProgress progress(Snapshot snapshot, ChainIdentity chain) {
+        ArtifactView artifact = artifacts.state(snapshot.certificateId(), snapshot.organizationId());
         String explorerUrl = snapshot.transactionHash() == null ? null : switch (chain.network()) {
             case "sepolia" -> "https://sepolia.etherscan.io/tx/" + snapshot.transactionHash();
             case "mainnet" -> "https://etherscan.io/tx/" + snapshot.transactionHash();
@@ -148,12 +154,22 @@ public class IssuanceService {
         return new IssueProgress(snapshot.certificateId(), snapshot.publicId(), snapshot.lifecycle(),
             snapshot.certificateHash(), snapshot.transactionStatus(), snapshot.transactionHash(),
             chain.network(), chain.chainId(), chain.contractAddress(), snapshot.blockNumber(),
-            snapshot.blockTimestamp(), explorerUrl, snapshot.failureReason(), guidance);
+            snapshot.blockTimestamp(), explorerUrl, snapshot.failureReason(), guidance,
+            artifact.status(), artifact.error());
+    }
+
+    private IssueProgress completedProgress(Snapshot snapshot, ChainIdentity chain) {
+        if (snapshot.lifecycle() == CertificateLifecycle.ISSUED) {
+            artifacts.ensure(snapshot.certificateId(), snapshot.organizationId());
+        }
+        return progress(snapshot, chain);
     }
 
     public record IssueProgress(UUID id, String certificateId, CertificateLifecycle lifecycle,
                                 String certificateHash, BlockchainTransactionStatus transactionStatus,
                                 String transactionHash, String network, long chainId,
                                 String contractAddress, Long blockNumber, java.time.Instant blockTimestamp,
-                                String explorerUrl, String failureReason, String guidance) {}
+                                String explorerUrl, String failureReason, String guidance,
+                                CertificateArtifactService.ArtifactState artifactStatus,
+                                String artifactError) {}
 }

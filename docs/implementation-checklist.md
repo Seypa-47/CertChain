@@ -63,11 +63,11 @@
 
 ## Phase 8 - PDF and QR
 
-- [ ] Implement storage abstraction.
-- [ ] Generate verification QR using ZXing.
-- [ ] Generate professional PDF using PDFBox and embed QR.
-- [ ] Implement authorized PDF download and artifact retry.
-- [ ] Add PDF content/render checks.
+- [x] Implement storage abstraction.
+- [x] Generate verification QR using ZXing.
+- [x] Generate professional PDF using PDFBox and embed QR.
+- [x] Implement authorized PDF download and artifact retry.
+- [x] Add PDF content/render checks.
 
 ## Phase 9 - Revocation and expiration
 

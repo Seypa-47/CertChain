@@ -327,4 +327,32 @@ class AuthIntegrationTests {
             .contentType(MediaType.APPLICATION_JSON).content(valid))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CERTIFICATE_NOT_DRAFT"));
     }
+
+    @Test void pdfDownloadRequiresIssuedTenantCertificateAndRetryUsesOnlyOwnedId() throws Exception {
+        Certificate certificate = certificates.saveAndFlush(new Certificate(ids.nextId(), admin.getOrganization(),
+            "Recipient", "private@example.com", "Course", LocalDate.now()));
+        Cookie owner = authCookie(admin);
+        Cookie outsider = authCookie(other);
+        Csrf token = csrf();
+        mvc.perform(get("/api/certificates/{id}/pdf", certificate.getId()))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/certificates/{id}/pdf", certificate.getId()).cookie(outsider))
+            .andExpect(status().isNotFound());
+        mvc.perform(get("/api/certificates/{id}/pdf", certificate.getId()).cookie(owner))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CERTIFICATE_NOT_ISSUED"));
+        certificate.beginIssuance("a".repeat(64), "v1");
+        certificate.markIssued(Instant.now());
+        certificates.saveAndFlush(certificate);
+        mvc.perform(post("/api/certificates/{id}/pdf/retry", certificate.getId())
+            .cookie(outsider, token.cookie()).header("X-XSRF-TOKEN", token.token()))
+            .andExpect(status().isNotFound());
+        mvc.perform(post("/api/certificates/{id}/pdf/retry", certificate.getId())
+            .cookie(owner, token.cookie()).header("X-XSRF-TOKEN", token.token()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("READY"));
+        mvc.perform(get("/api/certificates/{id}/pdf", certificate.getId()).cookie(owner))
+            .andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_PDF))
+            .andExpect(header().string("Content-Disposition", containsString(certificate.getCertificateId())));
+        mvc.perform(get("/api/certificates/{id}/pdf", certificate.getId()).cookie(outsider))
+            .andExpect(status().isNotFound());
+    }
 }

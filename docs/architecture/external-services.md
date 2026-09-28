@@ -42,7 +42,7 @@ No database, JWT, SMTP, RPC credential, or private key may use the `NEXT_PUBLIC_
 | `DEV_BOOTSTRAP_ENABLED` | No | Explicit flag for the development bootstrap; default false. |
 | `DEV_ORGANIZATION_NAME`, `DEV_ORGANIZATION_EMAIL`, `DEV_ADMIN_NAME`, `DEV_ADMIN_EMAIL` | No | Development bootstrap identities, required when enabled. |
 | `DEV_ADMIN_PASSWORD` | Yes | Development bootstrap password, required when enabled; never commit a real value. |
-| `STORAGE_ROOT` | No | Local artifact directory in development. |
+| `STORAGE_ROOT` | No | Private local artifact directory. Store only generated keys in PostgreSQL; use a durable volume for deployment or replace the storage interface with object storage. |
 | `MAIL_HOST`, `MAIL_PORT` | No | SMTP connection. |
 | `MAIL_USERNAME`, `MAIL_PASSWORD` | Yes | SMTP credentials when required. |
 | `MAIL_AUTH`, `MAIL_STARTTLS` | No | SMTP security settings. |

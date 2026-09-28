@@ -62,7 +62,33 @@ export type IssueProgress = {
   explorerUrl: string | null;
   failureReason: string | null;
   guidance: string;
+  artifactStatus: "PENDING" | "READY" | "FAILED";
+  artifactError: string | null;
 };
+
+export type PdfArtifactView = { status: "PENDING" | "READY" | "FAILED"; error: string | null };
+
+export async function getPdfArtifactStatus(id: string): Promise<PdfArtifactView> {
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/pdf/status`, {
+    credentials: "include", cache: "no-store",
+  }));
+  return (await response.json()) as PdfArtifactView;
+}
+
+export async function retryPdfArtifact(id: string): Promise<PdfArtifactView> {
+  const csrf = await getCsrfToken();
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/pdf/retry`, {
+    method: "POST", credentials: "include", cache: "no-store", headers: { "X-XSRF-TOKEN": csrf },
+  }));
+  return (await response.json()) as PdfArtifactView;
+}
+
+export async function downloadPdfArtifact(id: string): Promise<Blob> {
+  const response = await checked(await fetch(`${apiBase}/certificates/${encodeURIComponent(id)}/pdf`, {
+    credentials: "include", cache: "no-store",
+  }));
+  return response.blob();
+}
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api";
 

@@ -7,7 +7,8 @@ import {
   getCertificate, getIssueProgress, issueCertificate, reconcileCertificate,
   getRevokeProgress, revokeCertificate, reconcileRevocation,
   updateDraft,
-  type CertificateDetails, type IssueProgress, type RevokeProgress,
+  getPdfArtifactStatus, retryPdfArtifact, downloadPdfArtifact,
+  type CertificateDetails, type IssueProgress, type RevokeProgress, type PdfArtifactView,
 } from "@/services/certificates";
 import { CertificateForm } from "@/components/certificate-form";
 
@@ -16,6 +17,8 @@ export default function CertificateDetailsPage() {
   const [certificate, setCertificate] = useState<CertificateDetails | null>(null);
   const [progress, setProgress] = useState<IssueProgress | null>(null);
   const [revocation, setRevocation] = useState<RevokeProgress | null>(null);
+  const [artifact, setArtifact] = useState<PdfArtifactView | null>(null);
+  const [artifactError, setArtifactError] = useState("");
   const [revokeConfirming, setRevokeConfirming] = useState(false);
   const [reason, setReason] = useState("");
   const [editing, setEditing] = useState(false);
@@ -35,6 +38,8 @@ export default function CertificateDetailsPage() {
     try { setProgress(await getIssueProgress(id)); }
     catch { setProgress(null); }
     if (details.lifecycle === "ISSUED") {
+      try { setArtifact(await getPdfArtifactStatus(id)); }
+      catch { setArtifact(null); }
       try { setRevocation(await getRevokeProgress(id)); }
       catch { setRevocation(null); }
     }
@@ -48,6 +53,8 @@ export default function CertificateDetailsPage() {
       try { const state = await getIssueProgress(id); if (active) setProgress(state); }
       catch { if (active) setProgress(null); }
       if (details.lifecycle === "ISSUED") {
+        try { const state = await getPdfArtifactStatus(id); if (active) setArtifact(state); }
+        catch { if (active) setArtifact(null); }
         try { const state = await getRevokeProgress(id); if (active) setRevocation(state); }
         catch { if (active) setRevocation(null); }
       }
@@ -64,7 +71,10 @@ export default function CertificateDetailsPage() {
     const timer = window.setInterval(() => {
       getIssueProgress(id).then((state) => {
         setProgress(state);
-        if (state.lifecycle !== "ISSUING") void getCertificate(id).then(setCertificate);
+        if (state.lifecycle !== "ISSUING") {
+          void getCertificate(id).then(setCertificate);
+          void getPdfArtifactStatus(id).then(setArtifact).catch(() => setArtifact(null));
+        }
       }).catch(() => {});
     }, 5000);
     return () => window.clearInterval(timer);
@@ -110,6 +120,28 @@ export default function CertificateDetailsPage() {
         : "Reconciliation is unavailable. The current state is preserved; try again later.");
       try { await reload(); } catch { /* Keep the last known state. */ }
     } finally { setWorking(false); }
+  }
+
+  async function retryPdf() {
+    setWorking(true); setArtifactError("");
+    try { setArtifact(await retryPdfArtifact(id)); }
+    catch { setArtifactError("PDF generation could not be retried. Try again later."); }
+    finally { setWorking(false); }
+  }
+
+  async function downloadPdf() {
+    setWorking(true); setArtifactError("");
+    try {
+      const blob = await downloadPdfArtifact(id);
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${certificate?.certificateId ?? "certificate"}.pdf`;
+      document.body.appendChild(link);
+      link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch { setArtifactError("Certificate PDF is unavailable. Retry generation if needed."); }
+    finally { setWorking(false); }
   }
 
   if (loading) return <main className="mx-auto max-w-4xl px-6 py-12" role="status">Loading certificate…</main>;
@@ -178,6 +210,24 @@ export default function CertificateDetailsPage() {
             </button>}
         </div>
       </section>
+
+      {lifecycle === "ISSUED" && <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="artifact-heading">
+        <h2 id="artifact-heading" className="text-xl font-semibold text-slate-950">Certificate PDF</h2>
+        <p role="status" className="mt-2 text-sm text-slate-700">
+          {artifact?.status === "READY" ? "Ready to download"
+            : artifact?.status === "FAILED" ? "Generation failed. The confirmed blockchain proof remains valid."
+              : "Generation is pending or its status is unavailable."}
+        </p>
+        {artifact?.error && <p role="alert" className="mt-2 text-sm text-red-700">{artifact.error}</p>}
+        {artifactError && <p role="alert" className="mt-2 text-sm text-red-700">{artifactError}</p>}
+        <div className="mt-4 flex flex-wrap gap-3">
+          {artifact?.status === "READY" && <button type="button" disabled={working} onClick={() => void downloadPdf()}
+            className="rounded-lg bg-teal-800 px-4 py-2 font-medium text-white disabled:opacity-50">Download PDF</button>}
+          {artifact?.status !== "READY" && <button type="button" disabled={working} onClick={() => void retryPdf()}
+            className="rounded-lg border border-teal-800 px-4 py-2 font-medium text-teal-900 disabled:opacity-50">
+            {working ? "Working…" : "Retry PDF generation"}</button>}
+        </div>
+      </section>}
 
       {lifecycle === "ISSUED" && <section className="rounded-2xl border border-red-200 bg-white p-6 shadow-sm" aria-labelledby="revocation-heading">
         <h2 id="revocation-heading" className="text-xl font-semibold text-slate-950">Revocation</h2>

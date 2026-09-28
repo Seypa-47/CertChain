@@ -39,6 +39,11 @@ public class Certificate extends AuditableEntity {
     private String certificateHash;
     @Column(name = "pdf_storage_key", nullable = true, length = 1024)
     private String pdfStorageKey;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pdf_artifact_status", length = 12)
+    private PdfArtifactStatus pdfArtifactStatus;
+    @Column(name = "pdf_artifact_error", length = 200)
+    private String pdfArtifactError;
     @Column(name = "issued_at", nullable = true)
     private Instant issuedAt;
     @Column(name = "revoked_at", nullable = true)
@@ -72,6 +77,8 @@ public class Certificate extends AuditableEntity {
     public String getCanonicalizationVersion() { return canonicalizationVersion; }
     public String getCertificateHash() { return certificateHash; }
     public String getPdfStorageKey() { return pdfStorageKey; }
+    public PdfArtifactStatus getPdfArtifactStatus() { return pdfArtifactStatus; }
+    public String getPdfArtifactError() { return pdfArtifactError; }
     public Instant getIssuedAt() { return issuedAt; }
     public Instant getRevokedAt() { return revokedAt; }
     public String getRevocationReason() { return revocationReason; }
@@ -83,7 +90,18 @@ public class Certificate extends AuditableEntity {
     public void setDescription(String value) { this.description = value; }
     public void setIssueDate(LocalDate value) { requireDraft(); this.issueDate = value; }
     public void setExpiryDate(LocalDate value) { requireDraft(); this.expiryDate = value; }
-    public void setPdfStorageKey(String value) { this.pdfStorageKey = value; }
+    public void markPdfReady(String key) {
+        if (lifecycle != CertificateLifecycle.ISSUED) throw new IllegalStateException("Certificate is not issued");
+        this.pdfStorageKey = java.util.Objects.requireNonNull(key);
+        this.pdfArtifactStatus = PdfArtifactStatus.READY;
+        this.pdfArtifactError = null;
+    }
+    public void markPdfFailed() {
+        if (lifecycle != CertificateLifecycle.ISSUED) throw new IllegalStateException("Certificate is not issued");
+        this.pdfStorageKey = null;
+        this.pdfArtifactStatus = PdfArtifactStatus.FAILED;
+        this.pdfArtifactError = "PDF generation failed; retry is available";
+    }
     public void setIssuedAt(Instant value) { this.issuedAt = value; }
     public void setRevocationReason(String value) {
         if (lifecycle != CertificateLifecycle.ISSUED || revokedAt != null) {

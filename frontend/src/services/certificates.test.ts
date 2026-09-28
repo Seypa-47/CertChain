@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getCertificate, issueCertificate, reconcileCertificate, revokeCertificate,
   reconcileRevocation, verifyPublicCertificate, createDraft, updateDraft, listCertificates } from "./certificates";
+import { getPdfArtifactStatus, retryPdfArtifact, downloadPdfArtifact } from "./certificates";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -30,6 +31,27 @@ describe("certificate issuance requests", () => {
     expect(fetchMock.mock.calls[3][1]).toMatchObject({
       method: "POST", credentials: "include", headers: { "X-XSRF-TOKEN": "csrf-2" },
     });
+  });
+});
+
+describe("certificate PDF requests", () => {
+  it("keeps status and download credentialed, and requires CSRF for retry", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "FAILED" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: "csrf-pdf" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "READY" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([37, 80, 68, 70]), {
+        status: 200, headers: { "Content-Type": "application/pdf" },
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await getPdfArtifactStatus("id-1")).status).toBe("FAILED");
+    expect((await retryPdfArtifact("id-1")).status).toBe("READY");
+    expect((await downloadPdfArtifact("id-1")).size).toBe(4);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ credentials: "include" });
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({ method: "POST", credentials: "include",
+      headers: { "X-XSRF-TOKEN": "csrf-pdf" } });
+    expect(fetchMock.mock.calls[3][0]).toContain("/certificates/id-1/pdf");
+    expect(fetchMock.mock.calls[3][1]).toMatchObject({ credentials: "include" });
   });
 });
 
