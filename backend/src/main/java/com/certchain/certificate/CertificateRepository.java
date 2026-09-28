@@ -2,6 +2,7 @@ package com.certchain.certificate;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDate;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,21 @@ public interface CertificateRepository extends JpaRepository<Certificate, UUID>,
     @EntityGraph(attributePaths = "organization")
     Optional<Certificate> findByCertificateId(String certificateId);
     Page<Certificate> findByOrganizationId(UUID organizationId, Pageable pageable);
+    @Query("select count(c) from Certificate c where c.organization.id = :organizationId and c.lifecycle = :issued")
+    long countIssued(@Param("organizationId") UUID organizationId, @Param("issued") CertificateLifecycle issued);
+    @Query("select count(c) from Certificate c where c.organization.id = :organizationId and c.lifecycle = :issued "
+        + "and c.revokedAt is null and (c.expiryDate is null or c.expiryDate >= :today)")
+    long countValid(@Param("organizationId") UUID organizationId, @Param("issued") CertificateLifecycle issued,
+        @Param("today") LocalDate today);
+    @Query("select count(c) from Certificate c where c.organization.id = :organizationId and c.lifecycle = :issued "
+        + "and c.revokedAt is null and c.expiryDate < :today")
+    long countExpired(@Param("organizationId") UUID organizationId, @Param("issued") CertificateLifecycle issued,
+        @Param("today") LocalDate today);
+    @Query("select count(c) from Certificate c where c.organization.id = :organizationId and c.lifecycle = :issued "
+        + "and c.revokedAt is not null")
+    long countRevoked(@Param("organizationId") UUID organizationId, @Param("issued") CertificateLifecycle issued);
+    @Query("select c from Certificate c where c.organization.id = :organizationId order by c.createdAt desc, c.id desc")
+    java.util.List<Certificate> findRecentForOrganization(@Param("organizationId") UUID organizationId, Pageable pageable);
 
     @Query("""
         select c from Certificate c where c.organization.id = :organizationId

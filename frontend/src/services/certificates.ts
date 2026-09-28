@@ -1,6 +1,7 @@
 import { ApiRequestError, getCsrfToken } from "./auth";
 
 export type CertificateLifecycle = "DRAFT" | "ISSUING" | "ISSUED" | "ISSUE_FAILED";
+export type PublicStatus = "VALID" | "EXPIRED" | "REVOKED";
 export type TransactionStatus = "CREATED" | "SUBMITTED" | "CONFIRMED" | "FAILED";
 
 export type CertificateDetails = {
@@ -13,6 +14,7 @@ export type CertificateDetails = {
   issueDate: string;
   expiryDate: string | null;
   lifecycle: CertificateLifecycle;
+  publicStatus: PublicStatus | null;
   certificateHash: string | null;
   issuedAt: string | null;
   revokedAt: string | null;
@@ -26,7 +28,7 @@ export type CertificateDetails = {
 };
 
 export type CertificateListItem = Pick<CertificateDetails,
-  "id" | "certificateId" | "recipientName" | "programName" | "issueDate" | "expiryDate" | "lifecycle"> & {
+  "id" | "certificateId" | "recipientName" | "programName" | "issueDate" | "expiryDate" | "lifecycle" | "publicStatus"> & {
   createdAt: string;
 };
 

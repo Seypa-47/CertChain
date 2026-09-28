@@ -29,4 +29,7 @@ public interface BlockchainTransactionRepository extends JpaRepository<Blockchai
         Certificate certificate, BlockchainTransactionType transactionType);
     List<BlockchainTransaction> findByCertificateIdAndTransactionTypeOrderByCreatedAtDesc(
         UUID certificateId, BlockchainTransactionType transactionType);
+    @Query("select t from BlockchainTransaction t join fetch t.certificate c "
+        + "where c.organization.id = :organizationId order by t.createdAt desc, t.id desc")
+    List<BlockchainTransaction> findRecentForOrganization(@Param("organizationId") UUID organizationId, Pageable pageable);
 }

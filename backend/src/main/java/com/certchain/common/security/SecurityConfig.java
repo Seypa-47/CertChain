@@ -71,7 +71,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/auth/csrf", "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
-                .requestMatchers("/api/organization", "/api/organization/**", "/api/certificates/**")
+                .requestMatchers("/api/dashboard", "/api/organization", "/api/organization/**", "/api/certificates/**")
                     .hasAuthority("ORG_ADMIN")
                 .anyRequest().authenticated())
             .addFilterBefore(authentication, UsernamePasswordAuthenticationFilter.class)

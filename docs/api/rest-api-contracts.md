@@ -53,7 +53,7 @@ All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe 
 |---|---|---|
 | `GET` | `/api/organization` | Current organization profile. |
 | `PATCH` | `/api/organization` | Update allowed profile fields. |
-| `GET` | `/api/dashboard` | Counts and recent certificates from real data. |
+| `GET` | `/api/dashboard` | Tenant counts and the five most recent certificates and blockchain transactions. |
 | `POST` | `/api/certificates` | Create a draft. Server allocates the certificate ID. |
 | `GET` | `/api/certificates?page=0&size=20&query=&lifecycle=&sort=createdAt&direction=desc` | Paginated tenant-scoped list/search. |
 | `GET` | `/api/certificates/{id}` | Full authorized details by internal UUID. |
@@ -69,6 +69,10 @@ All routes below require the authentication cookie and `ORG_ADMIN` role. Unsafe 
 | `POST` | `/api/certificates/{id}/pdf/retry` | Regenerate a missing or failed artifact without resubmitting a chain transaction. |
 | `GET` | `/api/certificates/{id}/email` | Read issued-certificate delivery status and attempt count. |
 | `POST` | `/api/certificates/{id}/email/resend` | Send to the stored recipient only; requires CSRF and has a bounded attempt limit. |
+
+`GET /api/dashboard` returns `totalIssued`, `valid`, `expired`, `revoked`, `recentCertificates`, and `recentTransactions`. Counts are computed in database queries for the authenticated organization and include only `ISSUED` certificates. Valid means not revoked and expiry is null or today/later; expired means not revoked and expiry precedes today; revoked takes priority. Recent lists are capped at five and include internal certificate UUIDs only within the authenticated portal. The date boundary uses the backend's injected UTC clock.
+
+`GET /api/organization` returns `{ "id": "uuid", "name": "...", "email": "...", "walletAddress": null, "logoUrl": null }`. `PATCH /api/organization` accepts only `name` (1–200 characters), `email` (valid, at most 320 characters), and an optional 42-character Ethereum `walletAddress`; it requires authentication and CSRF. The backend normalizes name and email and selects the organization from the verified principal. The logo remains read-only in this phase. Invalid fields return `400 VALIDATION_ERROR`.
 
 Create request:
 

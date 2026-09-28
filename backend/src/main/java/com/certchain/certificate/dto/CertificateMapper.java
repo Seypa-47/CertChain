@@ -2,6 +2,7 @@ package com.certchain.certificate.dto;
 
 import com.certchain.certificate.Certificate;
 import com.certchain.certificate.CertificateLifecycle;
+import com.certchain.certificate.CertificateStatus;
 import com.certchain.organization.Organization;
 import com.certchain.organization.dto.OrganizationSummary;
 import com.certchain.transaction.BlockchainTransaction;
@@ -31,13 +32,14 @@ public final class CertificateMapper {
         certificate.setExpiryDate(request.expiryDate());
     }
 
-    public static CertificateResponse toResponse(Certificate certificate, List<BlockchainTransaction> transactions) {
+    public static CertificateResponse toResponse(Certificate certificate, List<BlockchainTransaction> transactions,
+                                                 CertificateStatus publicStatus) {
         Organization organization = certificate.getOrganization();
         return new CertificateResponse(certificate.getId(), certificate.getCertificateId(),
             new OrganizationSummary(organization.getId(), organization.getName(), organization.getLogoUrl()),
             certificate.getRecipientName(), certificate.getRecipientEmail(), certificate.getProgramName(),
             certificate.getDescription(), certificate.getIssueDate(), certificate.getExpiryDate(),
-            certificate.getLifecycle(), certificate.getCertificateHash(), certificate.getIssuedAt(),
+            certificate.getLifecycle(), publicStatus, certificate.getCertificateHash(), certificate.getIssuedAt(),
             certificate.getRevokedAt(), certificate.getCreatedAt(), certificate.getUpdatedAt(),
             transactions.stream().map(CertificateMapper::toTransactionDto).toList());
     }

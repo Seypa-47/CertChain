@@ -9,7 +9,8 @@ export default function NewCertificatePage() {
   const [created, setCreated] = useState<CertificateDetails | null>(null);
   return <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
     <div>
-      <p className="text-sm font-semibold uppercase tracking-widest text-teal-800">Certificates</p>
+      <Link href="/certificates" className="text-sm font-medium text-teal-800 underline">← Certificates</Link>
+      <p className="mt-5 text-sm font-semibold uppercase tracking-widest text-teal-800">Certificates</p>
       <h1 className="mt-2 text-3xl font-semibold text-slate-950">Create draft</h1>
       <p className="mt-2 text-slate-600">Review the details before issuing. The public ID is generated when you save.</p>
     </div>

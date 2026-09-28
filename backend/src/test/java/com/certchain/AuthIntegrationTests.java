@@ -157,6 +157,8 @@ class AuthIntegrationTests {
     @Test void roleAndCorsRulesApply() throws Exception {
         mvc.perform(get("/api/organization").with(user("viewer").authorities(() -> "VIEWER")))
             .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
+        mvc.perform(get("/api/dashboard").with(user("viewer").authorities(() -> "VIEWER")))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
         mvc.perform(options("/api/auth/login").header("Origin", "http://localhost:3000")
             .header("Access-Control-Request-Method", "POST"))
             .andExpect(status().isOk())
@@ -376,5 +378,33 @@ class AuthIntegrationTests {
         mvc.perform(post("/api/certificates/{id}/email/resend", certificate.getId())
             .cookie(owner, token.cookie()).header("X-XSRF-TOKEN", token.token()))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("EMAIL_DISABLED"));
+    }
+
+    @Test void dashboardAndOrganizationProfileAreTenantProtected() throws Exception {
+        Cookie owner = authCookie(admin);
+        Cookie outsider = authCookie(other);
+        Csrf token = csrf();
+        Certificate owned = certificates.saveAndFlush(new Certificate(ids.nextId(), admin.getOrganization(),
+            "Owned", "owned@example.com", "Program", LocalDate.now()));
+        Certificate foreign = certificates.saveAndFlush(new Certificate(ids.nextId(), other.getOrganization(),
+            "Foreign", "foreign@example.com", "Program", LocalDate.now()));
+        mvc.perform(get("/api/dashboard")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/dashboard").cookie(owner))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.recentCertificates[0].id")
+                .value(owned.getId().toString()));
+        mvc.perform(get("/api/dashboard").cookie(outsider))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.recentCertificates[0].id")
+                .value(foreign.getId().toString()));
+        mvc.perform(get("/api/organization").cookie(owner))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.id")
+                .value(admin.getOrganization().getId().toString()));
+        String update = "{\"name\":\"Updated School\",\"email\":\"office@example.test\",\"walletAddress\":null}";
+        mvc.perform(patch("/api/organization").cookie(owner).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isForbidden());
+        mvc.perform(patch("/api/organization").cookie(owner, token.cookie())
+            .header("X-XSRF-TOKEN", token.token()).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Updated School"));
+        mvc.perform(get("/api/organization").cookie(outsider))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Second"));
     }
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listCertificates, type CertificateLifecycle, type CertificatePage } from "@/services/certificates";
+import { CertificateStatus } from "@/components/certificate-status";
 
 export default function CertificatesPage() {
   const [searchInput, setSearchInput] = useState("");
@@ -54,7 +55,10 @@ export default function CertificatesPage() {
       <button type="submit" className="self-end rounded-lg border border-teal-800 px-4 py-2 font-medium text-teal-900">Search</button>
     </form>
 
-    {loading ? <p role="status" className="text-slate-600">Loading certificates…</p> : error ?
+    {loading ? <div role="status" aria-label="Loading certificates" className="space-y-3">
+      {[1, 2, 3].map((item) => <div key={item} className="h-16 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="h-4 w-1/3 rounded bg-slate-200" /></div>)}<span className="sr-only">Loading certificates…</span>
+    </div> : error ?
       <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">
         {error} <button type="button" className="ml-2 underline" onClick={() => { setLoading(true); setRetry(retry + 1); }}>Retry</button>
       </div> : rows.length === 0 ?
@@ -67,12 +71,12 @@ export default function CertificatesPage() {
             <thead className="bg-slate-50 text-slate-700"><tr>
               <th scope="col" className="px-4 py-3">Certificate ID</th><th scope="col" className="px-4 py-3">Recipient</th>
               <th scope="col" className="px-4 py-3">Program</th><th scope="col" className="px-4 py-3">Issue date</th>
-              <th scope="col" className="px-4 py-3">Lifecycle</th>
+              <th scope="col" className="px-4 py-3">Lifecycle and status</th>
             </tr></thead>
             <tbody>{rows.map((item) => <tr key={item.id} className="border-t border-slate-100">
               <td className="px-4 py-3 font-medium"><Link className="text-teal-800 underline" href={`/certificates/${item.id}`}>{item.certificateId}</Link></td>
               <td className="px-4 py-3">{item.recipientName}</td><td className="px-4 py-3">{item.programName}</td>
-              <td className="px-4 py-3">{item.issueDate}</td><td className="px-4 py-3">{item.lifecycle.replaceAll("_", " ")}</td>
+              <td className="px-4 py-3">{item.issueDate}</td><td className="px-4 py-3"><CertificateStatus lifecycle={item.lifecycle} status={item.publicStatus} /></td>
             </tr>)}</tbody>
           </table>
         </div>
@@ -81,7 +85,7 @@ export default function CertificatesPage() {
           <span className="font-semibold text-teal-800">{item.certificateId}</span>
           <span className="mt-2 block text-slate-950">{item.recipientName}</span>
           <span className="block text-sm text-slate-600">{item.programName}</span>
-          <span className="mt-2 block text-xs text-slate-600">Lifecycle: {item.lifecycle.replaceAll("_", " ")}</span>
+          <span className="mt-2 block"><CertificateStatus lifecycle={item.lifecycle} status={item.publicStatus} /></span>
         </Link>)}</div>
       </>}
 

@@ -33,13 +33,16 @@ public class CertificateDraftService {
     private final OrganizationRepository organizations;
     private final BlockchainTransactionRepository transactions;
     private final CertificateIdGenerator ids;
+    private final CertificateStatusService statuses;
 
     public CertificateDraftService(CertificateRepository certificates, OrganizationRepository organizations,
-                                   BlockchainTransactionRepository transactions, CertificateIdGenerator ids) {
+                                   BlockchainTransactionRepository transactions, CertificateIdGenerator ids,
+                                   CertificateStatusService statuses) {
         this.certificates = certificates;
         this.organizations = organizations;
         this.transactions = transactions;
         this.ids = ids;
+        this.statuses = statuses;
     }
 
     @Transactional
@@ -50,7 +53,7 @@ public class CertificateDraftService {
             normalizedText(request.recipientName()), normalizedEmail(request.recipientEmail()),
             normalizedText(request.programName()), normalizedDescription(request.description()),
             request.issueDate(), request.expiryDate()), organization, ids.nextId());
-        return CertificateMapper.toResponse(certificates.saveAndFlush(draft), List.of());
+        return CertificateMapper.toResponse(certificates.saveAndFlush(draft), List.of(), null);
     }
 
     @Transactional(readOnly = true)
@@ -79,7 +82,8 @@ public class CertificateDraftService {
             return builder.and(predicates.toArray(Predicate[]::new));
         };
         return CertificatePage.from(certificates.findAll(tenantFilter, PageRequest.of(page, size, order))
-            .map(CertificateListItem::from));
+            .map(c -> CertificateListItem.from(c,
+                c.getLifecycle() == CertificateLifecycle.ISSUED ? statuses.status(c) : null)));
     }
 
     @Transactional(readOnly = true)
@@ -89,7 +93,8 @@ public class CertificateDraftService {
         var all = new ArrayList<com.certchain.transaction.BlockchainTransaction>();
         all.addAll(transactions.findByCertificateIdAndTransactionTypeOrderByCreatedAtDesc(id, BlockchainTransactionType.ISSUE));
         all.addAll(transactions.findByCertificateIdAndTransactionTypeOrderByCreatedAtDesc(id, BlockchainTransactionType.REVOKE));
-        return CertificateMapper.toResponse(certificate, all);
+        return CertificateMapper.toResponse(certificate, all,
+            certificate.getLifecycle() == CertificateLifecycle.ISSUED ? statuses.status(certificate) : null);
     }
 
     @Transactional
@@ -104,7 +109,7 @@ public class CertificateDraftService {
             normalizedText(request.programName()), normalizedDescription(request.description()),
             request.issueDate(), request.expiryDate()));
         certificates.flush();
-        return CertificateMapper.toResponse(certificate, List.of());
+        return CertificateMapper.toResponse(certificate, List.of(), null);
     }
 
     private static String normalizedText(String value) {

@@ -12,6 +12,8 @@ import {
   type CertificateDetails, type IssueProgress, type RevokeProgress, type PdfArtifactView, type EmailDeliveryView,
 } from "@/services/certificates";
 import { CertificateForm } from "@/components/certificate-form";
+import { CertificateStatus } from "@/components/certificate-status";
+import { ApiRequestError } from "@/services/auth";
 
 export default function CertificateDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,7 +32,10 @@ export default function CertificateDetailsPage() {
   const [working, setWorking] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
+  const [revision, setRevision] = useState(0);
   const confirmButton = useRef<HTMLButtonElement>(null);
+  const cancelIssueButton = useRef<HTMLButtonElement>(null);
   const reasonInput = useRef<HTMLTextAreaElement>(null);
   const confirmRevokeButton = useRef<HTMLButtonElement>(null);
   const cancelRevokeButton = useRef<HTMLButtonElement>(null);
@@ -55,6 +60,7 @@ export default function CertificateDetailsPage() {
     getCertificate(id).then(async (details) => {
       if (!active) return;
       setCertificate(details);
+      setError(""); setNotFound(false);
       try { const state = await getIssueProgress(id); if (active) setProgress(state); }
       catch { if (active) setProgress(null); }
       if (details.lifecycle === "ISSUED") {
@@ -65,10 +71,13 @@ export default function CertificateDetailsPage() {
         try { const state = await getEmailDeliveryStatus(id); if (active) setDelivery(state); }
         catch { if (active) setDelivery(null); }
       }
-    }).catch(() => { if (active) setError("Certificate details could not be loaded."); })
+    }).catch((failure: unknown) => { if (active) {
+      setNotFound(failure instanceof ApiRequestError && failure.status === 404);
+      setError("Certificate details could not be loaded.");
+    } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [id]);
+  }, [id, revision]);
 
   useEffect(() => { if (confirming) confirmButton.current?.focus(); }, [confirming]);
   useEffect(() => { if (revokeConfirming) reasonInput.current?.focus(); }, [revokeConfirming]);
@@ -160,8 +169,16 @@ export default function CertificateDetailsPage() {
     finally { setWorking(false); }
   }
 
-  if (loading) return <main className="mx-auto max-w-4xl px-6 py-12" role="status">Loading certificate…</main>;
-  if (!certificate) return <main className="mx-auto max-w-4xl px-6 py-12" role="alert">{error}</main>;
+  if (loading) return <main className="mx-auto max-w-4xl space-y-4 px-6 py-12" role="status" aria-label="Loading certificate">
+    <div className="h-9 w-48 rounded bg-slate-200" /><div className="h-52 rounded-2xl border border-slate-200 bg-white" />
+    <span className="sr-only">Loading certificate…</span></main>;
+  if (!certificate) return <main className="mx-auto max-w-4xl space-y-4 px-6 py-12" role="alert">
+    <h1 className="text-2xl font-semibold text-slate-950">{notFound ? "Certificate not found" : "Certificate unavailable"}</h1>
+    <p className="text-slate-700">{notFound ? "This certificate is unavailable in your organization." : error}</p>
+    <div className="flex gap-3">{!notFound && <button type="button" onClick={() => { setLoading(true); setRevision((value) => value + 1); }}
+      className="rounded-lg bg-teal-800 px-4 py-2 font-medium text-white">Try again</button>}
+      <Link href="/certificates" className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-800">All certificates</Link></div>
+  </main>;
 
   const lifecycle = progress?.lifecycle ?? certificate.lifecycle;
   return (
@@ -171,6 +188,7 @@ export default function CertificateDetailsPage() {
         <p className="text-sm font-semibold uppercase tracking-widest text-teal-800">Certificate details</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">{certificate.certificateId}</h1>
         <p className="mt-2 text-slate-600">{certificate.organization.name}</p>
+        <p className="mt-3"><CertificateStatus lifecycle={lifecycle} status={certificate.publicStatus} /></p>
       </div>
 
       {saved && <p role="status" className="rounded-lg bg-teal-50 p-3 text-sm text-teal-900">Draft saved successfully.</p>}
@@ -294,12 +312,21 @@ export default function CertificateDetailsPage() {
         </dl>
       </section>
 
-      {confirming && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
-        <div role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      {confirming && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setConfirming(false);
+          if (event.key === "Tab" && event.shiftKey && document.activeElement === cancelIssueButton.current) {
+            event.preventDefault(); confirmButton.current?.focus();
+          } else if (event.key === "Tab" && !event.shiftKey && document.activeElement === confirmButton.current) {
+            event.preventDefault(); cancelIssueButton.current?.focus();
+          }
+        }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description"
+          className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
           <h2 id="confirm-title" className="text-xl font-semibold text-slate-950">Confirm issuance</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Proof fields will be frozen and a blockchain transaction submitted. Confirm the recipient, program, and dates before continuing.</p>
+          <p id="confirm-description" className="mt-3 text-sm leading-6 text-slate-600">Proof fields will be frozen and a blockchain transaction submitted. Confirm the recipient, program, and dates before continuing.</p>
           <div className="mt-6 flex justify-end gap-3">
-            <button type="button" onClick={() => setConfirming(false)} className="rounded-lg border px-4 py-2">Cancel</button>
+            <button ref={cancelIssueButton} type="button" onClick={() => setConfirming(false)} className="rounded-lg border px-4 py-2">Cancel</button>
             <button ref={confirmButton} type="button" onClick={() => void act("issue")}
               className="rounded-lg bg-teal-800 px-4 py-2 font-medium text-white">Confirm issue</button>
           </div>

@@ -85,9 +85,9 @@
 
 ## Phase 11 - Dashboard and UI polish
 
-- [ ] Add real aggregate counts and recent activity.
-- [ ] Complete responsive navigation and organization profile.
-- [ ] Audit accessibility, loading, empty, error, and confirmation states.
+- [x] Add tenant-scoped database counts and bounded recent activity.
+- [x] Complete responsive navigation and validated organization profile.
+- [x] Audit keyboard focus, status text, loading, empty, error, and confirmation states at mobile, tablet, and desktop widths.
 
 ## Phase 12 - Verification and security review
 
