@@ -31,7 +31,22 @@
 		<web3j.version>5.0.3</web3j.version>
 		<pdfbox.version>3.0.8</pdfbox.version>
 		<zxing.version>3.5.4</zxing.version>
+		<tomcat.version>11.0.25</tomcat.version>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.bouncycastle</groupId>
+				<artifactId>bcprov-jdk18on</artifactId>
+				<version>1.85</version>
+			</dependency>
+			<dependency>
+				<groupId>io.vertx</groupId>
+				<artifactId>vertx-core</artifactId>
+				<version>4.5.27</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

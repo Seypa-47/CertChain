@@ -91,11 +91,11 @@
 
 ## Phase 12 - Verification and security review
 
-- [ ] Run backend unit/integration/security tests.
-- [ ] Run contract tests and coverage.
-- [ ] Run frontend component and main-flow tests.
-- [ ] Execute all five required demo scenarios.
-- [ ] Review secret handling, logging, CORS, authorization, validation, and dependency risks.
+- [ ] Run the full backend suite with PostgreSQL Testcontainers. Unit tests and opt-in external PostgreSQL/local-chain integration tests passed, but the Docker-backed classes skipped while Docker Desktop was unavailable.
+- [x] Run contract tests and coverage.
+- [x] Run frontend component and main-flow tests.
+- [x] Execute the unknown, issue/valid, expired, revoke/reverify, and tamper demo scenarios with synthetic data.
+- [x] Review secret handling, logging, CORS, authorization, validation, and dependency risks; record the remaining limitations in the Phase 12 evidence.
 
 ## Phase 13 - Deployment
 
