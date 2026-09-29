@@ -108,7 +108,7 @@
 ## Phase 14 - Assignment documentation
 
 - [ ] Capture architecture, flow, ER, blockchain, contract, and UI evidence.
-- [ ] Write implementation summary and contribution report.
+- [x] Write implementation summary and contribution report from Git evidence (draft; update after publication).
 - [ ] Add public GitHub and demo URLs.
 - [ ] Record focused demo flow.
 - [ ] Render and inspect the final submission PDF.
