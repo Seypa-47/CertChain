@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,7 @@ public class S3ArtifactStorage implements ArtifactStorage {
     private final S3Client client;
     private final String bucket;
 
+    @Autowired
     public S3ArtifactStorage(
         @Value("${app.storage.s3.endpoint}") String endpoint,
         @Value("${app.storage.s3.region}") String region,
