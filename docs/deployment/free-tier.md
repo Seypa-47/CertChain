@@ -1,6 +1,6 @@
 # Free-tier deployment runbook
 
-Deployment is partial: the frontend is on Vercel Hobby, the backend is live on Render Free, and Flyway has initialized Neon PostgreSQL on 2026-10-04. No production admin, Sepolia contract, or SMTP sender has been verified yet, so the certificate demo is not ready. Use only free plans and leave billing and paid upgrades disabled. Public URLs, contract addresses, transaction hashes, and smoke-test results must be recorded only after they exist. Do not paste passwords, API keys, private keys, or a database URL containing credentials into a chat, issue, commit, or frontend variable.
+Deployment is partial: the frontend is on Vercel Hobby, the backend is live on Render Free, and Flyway initialized Neon PostgreSQL on 2026-10-04. The production admin login and draft workflow were verified on 2026-10-05. No Sepolia contract or SMTP sender has been verified yet, so the issuance demo is not ready. Use only free plans and leave billing and paid upgrades disabled. Public URLs, contract addresses, transaction hashes, and smoke-test results must be recorded only after they exist. Do not paste passwords, API keys, private keys, or a database URL containing credentials into a chat, issue, commit, or frontend variable.
 
 ## Selected services
 
@@ -39,8 +39,9 @@ Free quotas, account eligibility, and anti-abuse policies can change. Do not add
 
 - Frontend URL: https://cert-chain-gold.vercel.app (Vercel Hobby; homepage and login page verified in the browser on 2026-10-04)
 - Deployment source: https://github.com/Seypa-47/CertChain, branch `main`, backend commit `7d9f94fd1d72ac56174968c1849a53f3ea031540`; fork of the original team repository, retaining author history.
-- Frontend build: Next.js preset, root directory `frontend`, install command `npm ci`; `NEXT_PUBLIC_API_BASE_URL=/api`, `API_PROXY_ORIGIN` and `API_INTERNAL_BASE_URL` point to the live Render origin. The Vercel production redeployment was Ready on 2026-10-04. The first-party CSRF route returned HTTP 200 and a Secure, SameSite=Lax `XSRF-TOKEN` cookie; unauthenticated `/api/auth/me` returned HTTP 401. Login requires the one-time production admin account.
-- Frontend evidence: [deployed login page](../screenshots/vercel-frontend-deployed-2026-10-04.jpg). This is frontend deployment evidence only, not a completed system smoke test.
+- Frontend build: Next.js preset, root directory `frontend`, install command `npm ci`; `NEXT_PUBLIC_API_BASE_URL=/api`, `API_PROXY_ORIGIN` and `API_INTERNAL_BASE_URL` point to the live Render origin. The Vercel production redeployment was Ready on 2026-10-04. The first-party CSRF route returned HTTP 200 and a Secure, SameSite=Lax `XSRF-TOKEN` cookie; unauthenticated `/api/auth/me` returned HTTP 401.
+- Production admin: the one-time local provisioning command completed against Neon on 2026-10-05, and `admincert@certchain.com` signed in through Vercel. Only a BCrypt password hash was stored. One synthetic draft was created with public ID `CERT-2026-000001`; its protected details loaded and issuance was disabled while blockchain integration is off. The public verification page returned **Not found** for that draft.
+- Frontend evidence: [deployed login page](../screenshots/vercel-frontend-deployed-2026-10-04.jpg), [authenticated dashboard](../screenshots/production-admin-dashboard-2026-10-05.png), [draft creation](../screenshots/production-draft-created-2026-10-05.png), [draft details](../screenshots/production-draft-details-2026-10-05.png), and [public not-found response](../screenshots/production-draft-public-not-found-2026-10-05.png). These are partial production smoke results, not on-chain issuance evidence.
 - API origin: https://certchain-api-06gv.onrender.com (Render Free Docker; deployment `7d9f94f` Live on 2026-10-04). `/actuator/health` returned HTTP 200 and `UP`. Startup logs show PostgreSQL 17.11, Flyway schema version 4 with all four migrations validated, and Hibernate initialization with `ddl-auto=validate`.
 - Private storage: Neon Free project `certchain` has bucket `certchain-pdfs`; Render is configured for `STORAGE_TYPE=s3`. Object upload/download has not yet been smoke-tested.
 - Backend evidence: [Render Live deployment](../screenshots/render-api-live-2026-10-04.png). This confirms service health, not login, issuance, email, or on-chain proof.
@@ -50,4 +51,4 @@ Free quotas, account eligibility, and anti-abuse policies can change. Do not add
 - Admin public address: pending
 - Issuer public address: pending
 - Explorer source verification: pending
-- Flyway and health: passed. Login/issue/verify/PDF/email/revoke production smoke results: pending.
+- Flyway, health, login, draft creation/details, and public draft non-disclosure: passed. On-chain issue/verify/PDF/email/revoke production smoke results: pending.
