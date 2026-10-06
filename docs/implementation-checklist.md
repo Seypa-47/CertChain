@@ -17,7 +17,8 @@
 - [x] Add Flyway migrations, constraints, and indexes.
 - [x] Implement entities, enums, repositories, DTOs, and mappers.
 - [x] Implement concurrency-safe certificate ID allocation.
-- [x] Add repository and container-backed integration tests.
+- [x] Add repository and container-backed integration test code.
+- [ ] Execute the complete PostgreSQL Testcontainers suite without skips. The 3 October run still skipped Docker-dependent classes; separate external PostgreSQL runs passed in September.
 
 ## Phase 3 - Authentication and tenancy
 
@@ -81,7 +82,7 @@
 - [x] Implement templated issuance email with the generated PDF attachment.
 - [x] Record delivery attempts without rolling back issuance.
 - [x] Add bounded retry, authorized resend, and development SMTP configuration.
-- [ ] Complete successful and failed delivery testing against Mailpit and PostgreSQL. Unit tests pass; Docker Desktop is currently unavailable.
+- [ ] Complete successful and failed delivery testing against Mailpit and PostgreSQL. Successful local issuance-to-Mailpit delivery with a PDF attachment was observed on 29 September; the full delivery failure/recovery integration gate remains open while Docker is unavailable.
 
 ## Phase 11 - Dashboard and UI polish
 
@@ -99,10 +100,10 @@
 
 ## Phase 13 - Deployment
 
-- [ ] Provision managed PostgreSQL and file/object storage.
-- [ ] Deploy and verify the contract on Sepolia.
+- [x] Provision Neon PostgreSQL and private object storage; Flyway and a generated PDF object were observed in production.
+- [x] Deploy and verify the contract on Sepolia, including roles, source, and issue/revoke events.
 - [ ] Configure backend secrets and HTTPS deployment.
-- [ ] Deploy frontend and configure production origin/API URL.
+- [x] Deploy the Vercel frontend on Hobby and configure its production API origin.
 - [ ] Run production smoke tests and backup/recovery checks.
 
 ## Phase 14 - Assignment documentation
