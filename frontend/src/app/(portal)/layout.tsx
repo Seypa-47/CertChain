@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { AuthSessionGuard } from "@/components/auth-session-guard";
 import { LogoutButton } from "@/components/logout-button";
 import { PortalNavigation } from "@/components/portal-navigation";
+import { PortalWarmup } from "@/components/portal-warmup";
 import type { AuthUser } from "@/services/auth";
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
@@ -15,8 +16,10 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   const response = await fetch(`${apiBase}/auth/me`, {
     headers: { Cookie: cookieHeader },
     cache: "no-store",
+    signal: AbortSignal.timeout(8_000),
   }).catch(() => null);
-  if (!response?.ok) redirect("/login");
+  if (response?.status === 401 || response?.status === 403) redirect("/login");
+  if (!response?.ok) return <PortalWarmup />;
   const user = (await response.json()) as AuthUser;
 
   return (
